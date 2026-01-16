@@ -2445,16 +2445,34 @@ with app.app_context():
     # Verifica se existe semana atual
     get_semana_atual()
 
+# ======================================================
+# EXECUÇÃO PARA PRODUÇÃO/DEVELOPMENT
+# ======================================================
+
+# ⬇️⬇️⬇️ INSIRA AQUI ⬇️⬇️⬇️
 if __name__ == '__main__':
+    import os
+    
     port = int(os.environ.get("PORT", 5000))
-    debug = os.environ.get('FLASK_ENV') == 'development'
+    debug = os.environ.get('FLASK_ENV') != 'production'
     
     print(f"🚀 Iniciando servidor na porta {port}")
     print(f"🔧 Modo debug: {debug}")
-    print(f"🌐 URL: http://0.0.0.0:{port}")
+    print(f"💻 Sistema: {os.name}")
     
-    socketio.run(app, 
-                 host='0.0.0.0', 
-                 port=port, 
-                 debug=debug, 
-                 allow_unsafe_werkzeug=True)
+    # Detecta se está no Railway
+    is_railway = os.environ.get('RAILWAY_ENVIRONMENT') == 'production'
+    
+    if is_railway or os.name != 'nt':  # Railway ou Linux/Mac
+        # Para produção no Railway, use configuração otimizada
+        socketio.run(app, 
+                    host='0.0.0.0', 
+                    port=port, 
+                    debug=debug,
+                    allow_unsafe_werkzeug=False)
+    else:  # Windows local
+        socketio.run(app, 
+                    host='0.0.0.0', 
+                    port=port, 
+                    debug=True,
+                    allow_unsafe_werkzeug=True)
