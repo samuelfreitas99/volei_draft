@@ -1,0 +1,15 @@
+[build]
+builder = "nixpacks"
+builderConfig = "{}"
+
+[deploy]
+healthcheckPath = "/api/test"
+healthcheckTimeout = 100
+restartPolicyType = "never"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "web"
+type = "web"
+port = 8000
+startCommand = "gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app"

@@ -197,6 +197,42 @@
         </div>
     </footer>
 
+    <!-- Substitua o script do Socket.IO por: -->
+<script>
+    // Conecta ao Socket.IO dinamicamente
+    const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socketUrl = `${socketProtocol}//${window.location.host}`;
+    
+    console.log('Tentando conectar ao Socket.IO em:', socketUrl);
+    
+    const socket = io(socketUrl, {
+        transports: ['websocket', 'polling'],  # Tenta WebSocket primeiro
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        timeout: 20000,
+        path: '/socket.io/'  // IMPORTANTE para Railway
+    });
+<script>    
+    // Event listeners para debug
+    socket.on('connect', () => {
+        console.log('✅ Socket.IO conectado com sucesso!');
+        console.log('Socket ID:', socket.id);
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('❌ Erro de conexão Socket.IO:', error);
+        console.log('Tentando reconectar...');
+    });
+    
+    socket.on('disconnect', (reason) => {
+        console.log('🔌 Socket.IO desconectado. Motivo:', reason);
+    });
+    
+    // Exponha o socket globalmente
+    window.socket = socket;
+</script>
+
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
