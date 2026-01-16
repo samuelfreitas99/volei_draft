@@ -11,78 +11,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Custom CSS -->
-
     <link rel="stylesheet" href="{{ url_for('static', filename='css/draft.css') }}">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        main {
-            flex: 1;
-        }
-        .card {
-            border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,.1);
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,.15);
-        }
-        .footer {
-            margin-top: auto;
-        }
-        .badge {
-            font-weight: 500;
-        }
-        .table th {
-            font-weight: 600;
-            background-color: #f8f9fa;
-            border-top: none;
-        }
-        .table-hover tbody tr:hover {
-            background-color: rgba(0,0,0,.02);
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-        .progress {
-            height: 1.5rem;
-            border-radius: 0.5rem;
-        }
-        .progress-bar {
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        .fade-in {
-            animation: fadeIn 0.3s ease-in;
-        }
-        @media (max-width: 768px) {
-            .card-body {
-                padding: 1rem;
-            }
-            .table-responsive {
-                font-size: 0.9rem;
-            }
-            h4, h5, h6 {
-                font-size: 1.1rem;
-            }
-        }
+        /* Seus estilos CSS aqui... */
     </style>
     
     {% block head %}{% endblock %}
 </head>
+<body>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -184,54 +120,18 @@
 
     <!-- Footer -->
     <footer class="footer bg-dark text-white py-3 mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5><i class="fas fa-volleyball-ball"></i> Sistema de Vôlei</h5>
-                    <p>Sistema de draft de times para jogos de vôlei</p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <p>&copy; {{ datetime.now().year }} - Todos os direitos reservados</p>
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-volleyball-ball"></i> Sistema de Vôlei</h5>
+                        <p>Sistema de draft de times para jogos de vôlei</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <p>&copy; {{ datetime.now().year }} - Todos os direitos reservados</p>
+                    </div>
                 </div>
             </div>
-        </div>
-    </footer>
-
-    <!-- Substitua o script do Socket.IO por: -->
-<script>
-    // Conecta ao Socket.IO dinamicamente
-    const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socketUrl = `${socketProtocol}//${window.location.host}`;
-    
-    console.log('Tentando conectar ao Socket.IO em:', socketUrl);
-    
-    const socket = io(socketUrl, {
-        transports: ['websocket', 'polling'],  # Tenta WebSocket primeiro
-        reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 1000,
-        timeout: 20000,
-        path: '/socket.io/'  // IMPORTANTE para Railway
-    });
-<script>    
-    // Event listeners para debug
-    socket.on('connect', () => {
-        console.log('✅ Socket.IO conectado com sucesso!');
-        console.log('Socket ID:', socket.id);
-    });
-    
-    socket.on('connect_error', (error) => {
-        console.error('❌ Erro de conexão Socket.IO:', error);
-        console.log('Tentando reconectar...');
-    });
-    
-    socket.on('disconnect', (reason) => {
-        console.log('🔌 Socket.IO desconectado. Motivo:', reason);
-    });
-    
-    // Exponha o socket globalmente
-    window.socket = socket;
-</script>
+        </footer>
 
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -239,6 +139,38 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- SocketIO -->
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    
+    <script>
+        // ✅ CORREÇÃO AQUI - Script corrigido
+        console.log('Iniciando conexão Socket.IO...');
+        
+        // Conecta ao Socket.IO
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            timeout: 20000
+        });
+        
+        // Event listeners para debug
+        socket.on('connect', () => {
+            console.log('✅ Socket.IO conectado com sucesso!');
+            console.log('Socket ID:', socket.id);
+        });
+        
+        socket.on('connect_error', (error) => {
+            console.error('❌ Erro de conexão Socket.IO:', error);
+            console.log('Tentando reconectar...');
+        });
+        
+        socket.on('disconnect', (reason) => {
+            console.log('🔌 Socket.IO desconectado. Motivo:', reason);
+        });
+        
+        // Exponha o socket globalmente
+        window.socket = socket;
+    </script>
     
     {% block scripts %}{% endblock %}
 </body>

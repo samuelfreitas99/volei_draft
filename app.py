@@ -40,8 +40,8 @@ def allowed_file(filename):
 # Inicialização das extensões
 db = SQLAlchemy(app)
 socketio = SocketIO(app, 
-                   async_mode='eventlet',
-                   cors_allowed_origins="*",  # Permite todas origens
+                   async_mode='threading',  # Mude para threading
+                   cors_allowed_origins="*",
                    logger=True,
                    engineio_logger=True)
 
@@ -2445,14 +2445,16 @@ with app.app_context():
     # Verifica se existe semana atual
     get_semana_atual()
 
-# ======================================================
-# EXECUÇÃO
-# ======================================================
-
-if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
-
-# Por:
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
+    print(f"🚀 Iniciando servidor na porta {port}")
+    print(f"🔧 Modo debug: {debug}")
+    print(f"🌐 URL: http://0.0.0.0:{port}")
+    
+    socketio.run(app, 
+                 host='0.0.0.0', 
+                 port=port, 
+                 debug=debug, 
+                 allow_unsafe_werkzeug=True)
