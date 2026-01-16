@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Mudar Capitão - {{ time.nome }}{% endblock %}
+
+{% block admin_content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exchange-alt"></i> Mudar Capitão do Time
+                        </h5>
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="alert alert-info">
+                            <h6>Informações do Time:</h6>
+                            <p class="mb-1"><strong>Time:</strong> {{ time.nome }}</p>
+                            <p class="mb-1"><strong>Capitão atual:</strong> {{ time.capitao.nome if time.capitao else 'Nenhum' }}</p>
+                            <p class="mb-0"><strong>Semana:</strong> {{ format_date(semana.data) }}</p>
+                            {% if semana.draft_em_andamento %}
+                            <p class="mb-0"><strong>Status:</strong> Draft em andamento</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('mudar_capitao', time_id=time.id) }}">
+                        <div class="mb-3">
+                            <label for="novo_capitao_id" class="form-label">Selecionar Novo Capitão</label>
+                            <select class="form-select" id="novo_capitao_id" name="novo_capitao_id" required>
+                                <option value="">Selecione um jogador...</option>
+                                {% for jogador in jogadores_disponiveis %}
+                                <option value="{{ jogador.id }}">
+                                    {{ jogador.nome }}
+                                    {% if jogador.capitao %} (Capitão){% endif %}
+                                    {% if jogador.posicao %} - {{ get_posicao_display(jogador.posicao) }}{% endif %}
+                                    {% if jogador.mensalista %} ⭐{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Apenas jogadores confirmados para esta semana aparecem na lista.
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Atenção:</strong> 
+                            {% if semana.draft_em_andamento %}
+                            Se o draft estiver em andamento e for a vez deste time, 
+                            o novo capitão assumirá a escolha imediatamente.
+                            {% else %}
+                            Esta alteração será permanente para este draft.
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Confirmar Mudança
+                            </button>
+                            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Validação extra
+    $('form').submit(function(e) {
+        const novoCapitao = $('#novo_capitao_id').val();
+        if (!novoCapitao) {
+            alert('Selecione um novo capitão!');
+            e.preventDefault();
+            return false;
+        }
+        
+        if (!confirm('Tem certeza que deseja alterar o capitão deste time?')) {
+            e.preventDefault();
+            return false;
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}

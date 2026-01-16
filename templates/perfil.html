@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil - Sistema de Vôlei{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-user"></i> Meu Perfil
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if not jogador %}
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Perfil Incompleto</h5>
+                    <p>Você ainda não tem um perfil de jogador completo. Para acessar todas as funcionalidades, complete seu perfil.</p>
+                    <a href="{{ url_for('completar_perfil') }}" class="btn btn-primary">
+                        <i class="fas fa-user-edit"></i> Completar Perfil
+                    </a>
+                </div>
+                {% else %}
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        {% if jogador.foto_perfil %}
+                        <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                             class="img-thumbnail rounded-circle mb-3" 
+                             style="width: 200px; height: 200px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 200px; height: 200px;">
+                            <i class="fas fa-user fa-5x text-white"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-3">
+                            <a href="{{ url_for('editar_perfil') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i> Editar Perfil
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <h3>{{ jogador.nome }}</h3>
+                        {% if jogador.apelido %}
+                        <h5 class="text-muted">"{{ jogador.apelido }}"</h5>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong><i class="fas fa-phone"></i> Telefone:</strong><br>
+                                    {{ jogador.telefone or 'Não informado' }}</p>
+                                
+                                <p><strong><i class="fas fa-city"></i> Cidade:</strong><br>
+                                    {{ jogador.cidade or 'Não informado' }}</p>
+                                
+                                <p><strong><i class="fas fa-bullseye"></i> Posição:</strong><br>
+                                    {{ get_posicao_display(jogador.posicao) if jogador.posicao else 'Não informada' }}</p>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <p><strong><i class="fas fa-chart-line"></i> Nível:</strong><br>
+                                    <span class="badge {% if jogador.nivel == 'iniciante' %}bg-info{% elif jogador.nivel == 'intermediario' %}bg-primary{% else %}bg-warning{% endif %}">
+                                        {{ get_nivel_display(jogador.nivel) }}
+                                    </span>
+                                </p>
+                                
+                                <p><strong><i class="fas fa-ruler-vertical"></i> Altura:</strong><br>
+                                    {{ jogador.altura or 'Não informada' }}</p>
+                                
+                                <p><strong><i class="fas fa-birthday-cake"></i> Idade:</strong><br>
+                                    {% if jogador.data_nascimento %}
+                                        {{ calcular_idade(jogador.data_nascimento) }} anos
+                                    {% else %}
+                                        Não informada
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            {% if jogador.mensalista %}
+                            <span class="badge bg-success me-2">
+                                <i class="fas fa-star"></i> Mensalista
+                            </span>
+                            {% endif %}
+                            
+                            {% if jogador.capitao %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-crown"></i> Capitão
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Histórico de Presenças -->
+                {% if historico %}
+                <hr class="my-4">
+                
+                <h5><i class="fas fa-history"></i> Histórico de Presenças</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Status</th>
+                                <th>Presença</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for registro in historico %}
+                            <tr>
+                                <td>{{ format_date(registro.data) }}</td>
+                                <td>
+                                    {% if registro.confirmado %}
+                                    <span class="badge bg-success">Confirmado</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Não Confirmado</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if registro.presente %}
+                                    <span class="badge bg-success">Presente</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+            
+            <div class="card-footer">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    {% if jogador %}
+                    Jogador desde {{ format_date(jogador.data_cadastro) }}
+                    {% else %}
+                    Conta criada em {{ format_date(current_user.created_at) }}
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+        
+        <!-- Informações da Conta -->
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-user-circle"></i> Informações da Conta</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Usuário:</strong> {{ current_user.username }}</p>
+                <p><strong>E-mail:</strong> {{ current_user.email or 'Não informado' }}</p>
+                <p><strong>Tipo de Conta:</strong> {{ current_user.role|title }}</p>
+                <p><strong>Último Login:</strong> 
+                    {% if current_user.last_login %}
+                        {{ format_date(current_user.last_login, '%d/%m/%Y %H:%M') }}
+                    {% else %}
+                        Nunca
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

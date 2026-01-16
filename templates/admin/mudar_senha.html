@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Mudar Senha de Jogador{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-key"></i> Mudar Senha - {{ jogador.nome }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <h6><i class="fas fa-info-circle"></i> Informações da Conta:</h6>
+                    <p class="mb-1"><strong>Usuário:</strong> {{ jogador.user.username }}</p>
+                    <p class="mb-0"><strong>Tipo:</strong> {{ jogador.user.role|title }}</p>
+                </div>
+                
+                <form method="POST" action="{{ url_for('mudar_senha_jogador', id=jogador.id) }}">
+                    <div class="mb-3">
+                        <label for="nova_senha" class="form-label">Nova Senha *</label>
+                        <input type="password" class="form-control" id="nova_senha" name="nova_senha" 
+                               minlength="6" required>
+                        <div class="form-text">Mínimo 6 caracteres</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirmar_senha" class="form-label">Confirmar Nova Senha *</label>
+                        <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" 
+                               minlength="6" required>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Atenção:</strong> Esta ação alterará a senha permanentemente. 
+                        O usuário não conseguirá mais acessar com a senha antiga.
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_jogadores') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> Alterar Senha
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

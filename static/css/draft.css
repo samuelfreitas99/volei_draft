@@ -1,0 +1,117 @@
+/* static/css/draft.css */
+
+/* Estilos para fotos de jogadores */
+.avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.jogador-avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+}
+
+.jogador-avatar-small {
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.jogador-avatar-large {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #0d6efd;
+}
+
+/* Para quando não há foto */
+.avatar-fallback {
+    background-color: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+/* Estilo para os cards de jogador */
+.jogador-card {
+    transition: all 0.2s ease;
+}
+
+.jogador-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Melhorar visualização da tabela */
+.table-jogadores td {
+    vertical-align: middle;
+}
+
+/* Badge personalizado */
+.badge-custom {
+    font-size: 0.75em;
+    padding: 0.25em 0.5em;
+}
+
+/* Layout para informações do jogador */
+.jogador-info {
+    display: flex;
+    align-items: center;
+}
+
+.jogador-foto {
+    flex-shrink: 0;
+    margin-right: 12px;
+}
+
+.jogador-detalhes {
+    flex-grow: 1;
+}
+
+/* Responsividade para fotos */
+@media (max-width: 768px) {
+    .jogador-avatar {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .jogador-avatar-large {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Estilo para draft em tempo real */
+.draft-live {
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% { border-color: #0d6efd; }
+    50% { border-color: #198754; }
+    100% { border-color: #0d6efd; }
+}
+
+/* Estilo para o jogador selecionado */
+.jogador-selecionado {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-left: 4px solid #0d6efd !important;
+}
+
+/* Animação para nova escolha */
+.nova-escolha {
+    animation: highlight 3s ease-out;
+}
+
+@keyframes highlight {
+    0% { background-color: rgba(25, 135, 84, 0.3); }
+    100% { background-color: transparent; }
+}

@@ -1,0 +1,441 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Gerenciar Times - Pós Draft{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>
+        <i class="fas fa-exchange-alt"></i> Gerenciar Times - {{ format_date(semana.data) }}
+    </h4>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<!-- Aviso se draft ainda está em andamento -->
+{% if semana.draft_em_andamento %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle"></i> 
+    <strong>Atenção:</strong> O draft ainda está em andamento. Alterações podem afetar o fluxo normal.
+</div>
+{% endif %}
+
+<div class="row">
+    {% for time in times %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header text-white" style="background-color: {{ time.cor }};">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">{{ time.nome }}</h5>
+                        <small>Capitão: {{ time.capitao.nome if time.capitao else 'Sem capitão' }}</small>
+                    </div>
+                    <span class="badge bg-light text-dark">
+                        {{ time.escolhas.count() }}/{{ semana.max_jogadores_por_time }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="list-group mb-3">
+                    {% for escolha in time.escolhas %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="d-flex align-items-center">
+                                {% if escolha.jogador.foto_perfil %}
+                                <img src="{{ escolha.jogador.foto_perfil }}" alt="{{ escolha.jogador.nome }}" 
+                                     class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ escolha.jogador.nome }}</strong>
+                                    {% if escolha.jogador.apelido %}
+                                        <br><small class="text-muted">"{{ escolha.jogador.apelido }}"</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if escolha.jogador.posicao %}
+                                <span class="badge bg-info ms-2">{{ get_posicao_display(escolha.jogador.posicao) }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-warning mover-btn"
+                                    data-jogador-id="{{ escolha.jogador_id }}"
+                                    data-jogador-nome="{{ escolha.jogador.nome }}"
+                                    data-time-origem="{{ time.id }}"
+                                    data-time-nome="{{ time.nome }}">
+                                <i class="fas fa-exchange-alt"></i> Mover
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Adicionar jogador a este time -->
+                {% if time.escolhas.count() < semana.max_jogadores_por_time %}
+                <div class="mt-3">
+                    <label class="form-label">Adicionar jogador a este time:</label>
+                    <select class="form-select adicionar-time-select" data-time-id="{{ time.id }}">
+                        <option value="">Selecione um jogador...</option>
+                        {% for jogador in jogadores_disponiveis %}
+                        <option value="{{ jogador.id }}" 
+                                data-jogador-nome="{{ jogador.nome }}">
+                            {{ jogador.nome }} 
+                            {% if jogador.posicao %}
+                            - {{ get_posicao_display(jogador.posicao) }}
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% else %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-info-circle"></i> Time completo ({{ semana.max_jogadores_por_time }}/{{ semana.max_jogadores_por_time }})
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Jogadores Disponíveis para Transferência -->
+{% if jogadores_disponiveis %}
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-user-plus"></i> Jogadores Disponíveis 
+                <span class="badge bg-light text-dark ms-2">{{ jogadores_disponiveis|length }}</span>
+            </h5>
+            <small>Clique em um time para adicionar</small>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for jogador in jogadores_disponiveis %}
+            <div class="col-md-4 col-lg-3 mb-3">
+                <div class="card h-100 jogador-disponivel-card" 
+                     data-jogador-id="{{ jogador.id }}"
+                     data-jogador-nome="{{ jogador.nome }}">
+                    <div class="card-body d-flex flex-column">
+                        <div class="text-center mb-2">
+                            {% if jogador.foto_perfil %}
+                            <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                                 class="rounded-circle mb-2" style="width: 60px; height: 60px; object-fit: cover;">
+                            {% else %}
+                            <div class="rounded-circle mb-2 bg-secondary d-flex align-items-center justify-content-center mx-auto" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-user text-white fa-2x"></i>
+                            </div>
+                            {% endif %}
+                            <h6 class="card-title mb-1">{{ jogador.nome }}</h6>
+                            {% if jogador.apelido %}
+                            <p class="card-text text-muted"><small>"{{ jogador.apelido }}"</small></p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            {% if jogador.posicao %}
+                                <span class="badge bg-info">{{ get_posicao_display(jogador.posicao) }}</span>
+                            {% endif %}
+                            <span class="badge {% if jogador.nivel == 'iniciante' %}bg-info
+                                          {% elif jogador.nivel == 'intermediario' %}bg-primary
+                                          {% else %}bg-warning{% endif %}">
+                                {{ get_nivel_display(jogador.nivel) }}
+                            </span>
+                            {% if jogador.mensalista %}
+                            <span class="badge bg-success">Mensalista</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <div class="btn-group w-100">
+                                {% for time in times %}
+                                {% if time.escolhas.count() < semana.max_jogadores_por_time %}
+                                <button type="button" class="btn btn-sm btn-outline-primary adicionar-btn"
+                                        data-jogador-id="{{ jogador.id }}"
+                                        data-jogador-nome="{{ jogador.nome }}"
+                                        data-time-id="{{ time.id }}"
+                                        data-time-nome="{{ time.nome }}"
+                                        style="border-color: {{ time.cor }}; color: {{ time.cor }};"
+                                        title="Adicionar ao {{ time.nome }}">
+                                    {{ time.nome }}
+                                </button>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> Não há jogadores disponíveis para adicionar. Todos os jogadores confirmados já estão em times.
+</div>
+{% endif %}
+
+<!-- Modal Transferência -->
+<div class="modal fade" id="transferirModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exchange-alt"></i> Transferir Jogador
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Transferir <strong id="transferirJogadorNome"></strong> do <span id="transferirTimeOrigemNome" class="badge bg-secondary"></span> para:</p>
+                <select class="form-select" id="timeDestinoSelect">
+                    <option value="">Escolha o time destino</option>
+                    {% for time in times %}
+                    <option value="{{ time.id }}">{{ time.nome }}</option>
+                    {% endfor %}
+                </select>
+                <div class="mt-3 alert alert-warning">
+                    <small><i class="fas fa-exclamation-triangle"></i> Esta ação moverá o jogador imediatamente.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" id="confirmarTransferenciaBtn" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Confirmar Transferência
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Jogador -->
+<div class="modal fade" id="adicionarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus"></i> Adicionar Jogador ao Time
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Adicionar <strong id="adicionarJogadorNome"></strong> ao <strong id="adicionarTimeNome"></strong>?</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> O jogador será adicionado imediatamente ao time selecionado.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" id="confirmarAdicaoBtn" class="btn btn-success">
+                    <i class="fas fa-check"></i> Confirmar Adição
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.jogador-disponivel-card {
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+.jogador-disponivel-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.adicionar-btn {
+    font-size: 0.75rem;
+    padding: 2px 5px;
+}
+.badge {
+    font-size: 0.75em;
+}
+</style>
+
+<script>
+let transferirDados = null;
+let adicionarDados = null;
+
+$(document).ready(function() {
+    // Botão mover jogador
+    $('.mover-btn').click(function() {
+        transferirDados = {
+            jogador_id: $(this).data('jogador-id'),
+            jogador_nome: $(this).data('jogador-nome'),
+            time_origem: $(this).data('time-origem'),
+            time_origem_nome: $(this).data('time-nome')
+        };
+        
+        $('#transferirJogadorNome').text(transferirDados.jogador_nome);
+        $('#transferirTimeOrigemNome').text(transferirDados.time_origem_nome);
+        
+        // Remove time origem das opções
+        $('#timeDestinoSelect option').show();
+        $('#timeDestinoSelect option[value="' + transferirDados.time_origem + '"]').hide();
+        $('#timeDestinoSelect').val('');
+        
+        $('#transferirModal').modal('show');
+    });
+    
+    // Adicionar jogador via select nos cards de time
+    $('.adicionar-time-select').change(function() {
+        const timeId = $(this).data('time-id');
+        const jogadorId = $(this).val();
+        const jogadorNome = $(this).find('option:selected').text();
+        
+        if (jogadorId) {
+            adicionarDados = {
+                jogador_id: jogadorId,
+                jogador_nome: jogadorNome,
+                time_id: timeId,
+                time_nome: $(this).closest('.card').find('.card-header h5').text().trim()
+            };
+            
+            $('#adicionarJogadorNome').text(jogadorNome);
+            $('#adicionarTimeNome').text(adicionarDados.time_nome);
+            $('#adicionarModal').modal('show');
+            
+            // Reseta o select
+            $(this).val('');
+        }
+    });
+    
+    // Adicionar jogador via botões nos cards de jogadores
+    $('.adicionar-btn').click(function() {
+        adicionarDados = {
+            jogador_id: $(this).data('jogador-id'),
+            jogador_nome: $(this).data('jogador-nome'),
+            time_id: $(this).data('time-id'),
+            time_nome: $(this).data('time-nome')
+        };
+        
+        $('#adicionarJogadorNome').text(adicionarDados.jogador_nome);
+        $('#adicionarTimeNome').text(adicionarDados.time_nome);
+        $('#adicionarModal').modal('show');
+    });
+    
+    // Confirmar transferência
+    $('#confirmarTransferenciaBtn').click(function() {
+        const timeDestino = $('#timeDestinoSelect').val();
+        
+        if (!timeDestino) {
+            alert('Selecione um time destino!');
+            return;
+        }
+        
+        transferirJogador(transferirDados.jogador_id, transferirDados.time_origem, timeDestino);
+        $('#transferirModal').modal('hide');
+    });
+    
+    // Confirmar adição
+    $('#confirmarAdicaoBtn').click(function() {
+        if (!adicionarDados || !adicionarDados.time_id) {
+            alert('Dados incompletos!');
+            return;
+        }
+        
+        adicionarJogadorTime(adicionarDados.jogador_id, adicionarDados.time_id);
+        $('#adicionarModal').modal('hide');
+    });
+    
+    // Auto refresh se draft em andamento
+    {% if semana.draft_em_andamento %}
+    setInterval(() => {
+        location.reload();
+    }, 10000); // 10 segundos
+    {% endif %}
+});
+
+function transferirJogador(jogadorId, timeOrigem, timeDestino) {
+    $.ajax({
+        url: '{{ url_for("trocar_jogador") }}',
+        type: 'POST',
+        data: {
+            semana_id: {{ semana.id }},
+            jogador_id: jogadorId,
+            time_destino_id: timeDestino
+        },
+        beforeSend: function() {
+            // Mostra loading
+            $('#confirmarTransferenciaBtn').html('<i class="fas fa-spinner fa-spin"></i> Processando...').prop('disabled', true);
+        },
+        success: function(response) {
+            if (response.success) {
+                showToast('✅ ' + response.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('❌ ' + response.message, 'danger');
+            }
+        },
+        error: function() {
+            showToast('❌ Erro ao transferir jogador. Tente novamente.', 'danger');
+        },
+        complete: function() {
+            $('#confirmarTransferenciaBtn').html('<i class="fas fa-check"></i> Confirmar Transferência').prop('disabled', false);
+        }
+    });
+}
+
+function adicionarJogadorTime(jogadorId, timeId) {
+    $.ajax({
+        url: '{{ url_for("adicionar_jogador_time") }}',
+        type: 'POST',
+        data: {
+            semana_id: {{ semana.id }},
+            jogador_id: jogadorId,
+            time_id: timeId
+        },
+        beforeSend: function() {
+            $('#confirmarAdicaoBtn').html('<i class="fas fa-spinner fa-spin"></i> Adicionando...').prop('disabled', true);
+        },
+        success: function(response) {
+            if (response.success) {
+                showToast('✅ ' + response.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('❌ ' + response.message, 'danger');
+            }
+        },
+        error: function() {
+            showToast('❌ Erro ao adicionar jogador. Tente novamente.', 'danger');
+        },
+        complete: function() {
+            $('#confirmarAdicaoBtn').html('<i class="fas fa-check"></i> Confirmar Adição').prop('disabled', false);
+        }
+    });
+}
+
+function showToast(message, type = 'info') {
+    // Cria um toast simples
+    const toast = $(`
+        <div class="toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `);
+    
+    $('body').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0]);
+    bsToast.show();
+    
+    // Remove após 3 segundos
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

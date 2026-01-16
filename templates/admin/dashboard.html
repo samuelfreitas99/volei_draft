@@ -1,0 +1,629 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Dashboard Admin{% endblock %}
+
+{% block admin_content %}
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Jogadores</h6>
+                        <h3 class="mb-0">{{ total_jogadores }}</h3>
+                    </div>
+                    <i class="fas fa-users fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Mensalistas</h6>
+                        <h3 class="mb-0">{{ total_mensalistas }}</h3>
+                    </div>
+                    <i class="fas fa-star fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Capitães</h6>
+                        <h3 class="mb-0">{{ total_capitaes }}</h3>
+                    </div>
+                    <i class="fas fa-crown fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        {% set total_vagas = semana.max_times * semana.max_jogadores_por_time %}
+        <div class="card text-white {% if confirmados >= total_vagas %}bg-success{% else %}bg-danger{% endif %}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Confirmados Hoje</h6>
+                        <h3 class="mb-0">{{ confirmados }}</h3>
+                        <small>{{ total_vagas }} vagas ({{ semana.max_times }} × {{ semana.max_jogadores_por_time }})</small>
+                    </div>
+                    <i class="fas fa-clipboard-check fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Gestão da Semana -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-week"></i> Gestão da Semana - {{ format_date(semana.data) }}
+                    </h5>
+                    <a href="{{ url_for('configurar_semana', id=semana.id) }}" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-cog"></i> Configurar
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Status Atual:</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge {% if semana.lista_aberta %}bg-success{% else %}bg-secondary{% endif %}">
+                            Lista: {% if semana.lista_aberta %}ABERTA{% else %}FECHADA{% endif %}
+                        </span>
+                        <span class="badge {% if semana.draft_em_andamento %}bg-warning{% elif semana.draft_finalizado %}bg-success{% else %}bg-secondary{% endif %}">
+                            Draft: {% if semana.draft_em_andamento %}EM ANDAMENTO{% elif semana.draft_finalizado %}FINALIZADO{% else %}NÃO INICIADO{% endif %}
+                        </span>
+                        <span class="badge bg-info">
+                            Times: {{ semana.max_times }}
+                        </span>
+                        <span class="badge bg-info">
+                            Jogadores/Time: {{ semana.max_jogadores_por_time }}
+                        </span>
+                        <span class="badge bg-info">
+                            Tempo: {{ semana.tempo_escolha }}s
+                        </span>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h6 class="mb-3">Ações Rápidas:</h6>
+                <div class="d-grid gap-2">
+                    {% if semana.lista_aberta %}
+                        <a href="{{ url_for('fechar_lista') }}" class="btn btn-warning" 
+                           onclick="return confirm('Fechar lista de presença?')">
+                            <i class="fas fa-lock"></i> Fechar Lista de Presença
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('abrir_lista') }}" class="btn btn-success">
+                            <i class="fas fa-lock-open"></i> Abrir Lista de Presença
+                        </a>
+                    {% endif %}
+                    
+                    {% if not semana.draft_em_andamento and not semana.draft_finalizado and not semana.lista_aberta %}
+                        {% set total_vagas = semana.max_times * semana.max_jogadores_por_time %}
+                        {% if confirmados >= total_vagas %}
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#configDraftModal">
+                                <i class="fas fa-play"></i> Iniciar Draft
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-primary" disabled>
+                                <i class="fas fa-play"></i> Iniciar Draft ({{ confirmados }}/{{ total_vagas }})
+                            </button>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if semana.draft_em_andamento %}
+                        <a href="{{ url_for('finalizar_draft') }}" class="btn btn-danger"
+                           onclick="return confirm('Finalizar draft atual?')">
+                            <i class="fas fa-stop"></i> Finalizar Draft
+                        </a>
+                    {% endif %}
+                    
+                    {% if semana.draft_finalizado %}
+                        <a href="{{ url_for('gerenciar_times') }}" class="btn btn-warning">
+                            <i class="fas fa-exchange-alt"></i> Gerenciar Times
+                        </a>
+                    {% endif %}
+                    
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('admin_jogadores') }}" class="btn btn-info">
+                            <i class="fas fa-users"></i> Jogadores
+                        </a>
+                        <a href="{{ url_for('admin_recados') }}" class="btn btn-secondary">
+                            <i class="fas fa-bullhorn"></i> Recados
+                        </a>
+                        <a href="{{ url_for('admin_pix') }}" class="btn btn-success">
+                            <i class="fas fa-qrcode"></i> PIX
+                        </a>
+                    </div>
+                    
+                    <!-- Botão Reiniciar Semana -->
+                    <button type="button" class="btn btn-danger mt-3" data-bs-toggle="modal" data-bs-target="#reiniciarModal">
+                        <i class="fas fa-redo"></i> Reiniciar Semana Completa
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configurações da Semana -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog"></i> Configurações Atuais
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><strong>Times:</strong> {{ semana.max_times }}</li>
+                            <li><strong>Jogadores por time:</strong> {{ semana.max_jogadores_por_time }}</li>
+                            <li><strong>Total de vagas:</strong> {{ semana.max_times * semana.max_jogadores_por_time }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><strong>Tempo por escolha:</strong> {{ semana.tempo_escolha }} segundos</li>
+                            <li><strong>Modo draft:</strong> {{ 'Snake' if semana.modo_draft == 'snake' else 'Linear' }}</li>
+                            <li><strong>Confirmados:</strong> {{ confirmados }} / {{ semana.max_times * semana.max_jogadores_por_time }}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="text-center mt-2">
+                    <a href="{{ url_for('configurar_semana', id=semana.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-edit"></i> Alterar Configurações
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lista de Espera -->
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock"></i> Lista de Espera
+                    <span class="badge bg-dark">{{ lista_espera|length }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if lista_espera %}
+                    <div class="list-group mb-3">
+                        {% for pessoa in lista_espera %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ pessoa.nome }}</strong>
+                                {% if pessoa.telefone %}
+                                    <br><small class="text-muted">{{ pessoa.telefone }}</small>
+                                {% endif %}
+                                {% if pessoa.posicao_preferida %}
+                                    <br><small class="badge bg-info">{{ get_posicao_display(pessoa.posicao_preferida) }}</small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <small class="text-muted me-2">{{ pessoa.adicionado_em.strftime('%H:%M') }}</small>
+                                <a href="{{ url_for('promover_lista_espera', id=pessoa.id) }}" 
+                                   class="btn btn-sm btn-success"
+                                   onclick="return confirm('Promover {{ pessoa.nome }} para a lista de confirmados?')">
+                                    <i class="fas fa-arrow-up"></i> Promover
+                                </a>
+                                <a href="{{ url_for('remover_lista_espera', id=pessoa.id) }}" 
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Remover {{ pessoa.nome }} da lista de espera?')">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        {{ lista_espera|length }} pessoa(s) aguardando na lista de espera.
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-check-circle"></i> Ninguém na lista de espera.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Times e Draft -->
+    <div class="col-md-6">
+        {% if times %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Times Formados
+                    </h5>
+                    {% if semana.draft_finalizado %}
+                    <a href="{{ url_for('gerenciar_times') }}" class="btn btn-sm btn-warning">
+                        <i class="fas fa-exchange-alt"></i> Gerenciar Times
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for time in times %}
+                    <div class="col-12 mb-3">
+                        <div class="card">
+                            <div class="card-header text-white" style="background-color: {{ time.cor }};">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">{{ time.nome }}</h6>
+                                        <small>
+                                            Capitão: {{ time.capitao.nome if time.capitao else 'Sem capitão' }}
+                                            {% if time.capitao and time.capitao.foto_perfil %}
+                                            <img src="{{ time.capitao.foto_perfil }}" alt="{{ time.capitao.nome }}" 
+                                                 class="rounded-circle ms-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('mudar_capitao', time_id=time.id) }}" 
+                                           class="btn btn-sm btn-outline-light"
+                                           title="Mudar Capitão">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </a>
+                                        <span class="badge bg-light text-dark ms-2">
+                                            {{ time.escolhas.count() }}/{{ semana.max_jogadores_por_time }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    {% for escolha in time.escolhas %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            {% if escolha.jogador.foto_perfil %}
+                                            <img src="{{ escolha.jogador.foto_perfil }}" alt="{{ escolha.jogador.nome }}" 
+                                                 class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 32px; height: 32px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <strong>{{ escolha.jogador.nome }}</strong>
+                                                {% if escolha.jogador.posicao %}
+                                                    <span class="badge bg-secondary ms-2">{{ get_posicao_display(escolha.jogador.posicao) }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">R{{ escolha.round_num }}E{{ escolha.ordem_escolha }}</small>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="text-center mt-2">
+                                    <span class="badge {% if time.escolhas.count() >= semana.max_jogadores_por_time %}bg-success{% else %}bg-warning{% endif %}">
+                                        {{ time.escolhas.count() }}/{{ semana.max_jogadores_por_time }} jogadores
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Jogadores Não Confirmados -->
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-times"></i> Mensalistas Não Confirmados
+                </h5>
+            </div>
+            <div class="card-body">
+                {% set mensalistas_nao_confirmados = [] %}
+                {% for jogador in jogadores if jogador.mensalista %}
+                    {% set confirmacao = confirmacoes.get(jogador.id) %}
+                    {% if not confirmacao or not confirmacao.confirmado %}
+                        {% set _ = mensalistas_nao_confirmados.append(jogador) %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if mensalistas_nao_confirmados %}
+                    <div class="list-group">
+                        {% for jogador in mensalistas_nao_confirmados %}
+                        <div class="list-group-item list-group-item-danger d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                {% if jogador.foto_perfil %}
+                                <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                                     class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ jogador.nome }}</strong>
+                                    {% if jogador.telefone %}
+                                        <br><small class="text-muted">{{ jogador.telefone }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <small class="text-muted">Não confirmou</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ mensalistas_nao_confirmados|length }} mensalista(s) não confirmaram presença.
+                        Vagas foram abertas na lista de espera automaticamente.
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-check-circle"></i> Todos os mensalistas confirmaram presença.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Ações Avançadas -->
+        <div class="card mt-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-tools"></i> Ações Avançadas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_recados') }}" class="btn btn-outline-info">
+                        <i class="fas fa-bullhorn"></i> Gerenciar Recados/Mural
+                    </a>
+                    <a href="{{ url_for('admin_pix') }}" class="btn btn-outline-success">
+                        <i class="fas fa-qrcode"></i> Gerenciar Chaves PIX
+                    </a>
+                    <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#configDraftModal">
+                        <i class="fas fa-cog"></i> Configurar Draft
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação Reiniciar Semana -->
+<div class="modal fade" id="reiniciarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Confirmar Reinício
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-circle"></i> ATENÇÃO: Esta ação é IRREVERSÍVEL!</h6>
+                </div>
+                
+                <p><strong>O que será removido:</strong></p>
+                <ul>
+                    <li>Todos os times formados no draft</li>
+                    <li>Todas as escolhas dos capitães</li>
+                    <li>Todas as confirmações de presença</li>
+                    <li>Status do draft atual</li>
+                    <li>Lista de espera atual</li>
+                </ul>
+                
+                <p><strong>O que será feito:</strong></p>
+                <ul>
+                    <li>Lista de presença será reaberta</li>
+                    <li>Novos jogadores poderão se inscrever</li>
+                    <li>Novo draft poderá ser iniciado do zero</li>
+                </ul>
+                
+                <p class="text-danger">
+                    <i class="fas fa-warning"></i> Esta ação não pode ser desfeita!
+                </p>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Se o draft já começou, reiniciar fará com que seja necessário
+                    iniciar um novo draft do zero.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <a href="{{ url_for('reiniciar_semana') }}" class="btn btn-danger">
+                    <i class="fas fa-redo"></i> Confirmar Reinício
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configuração Draft -->
+<div class="modal fade" id="configDraftModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-cog"></i> Configurar Draft
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('iniciar_draft') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="max_times" class="form-label">Número de Times *</label>
+                            <select class="form-select" id="max_times" name="max_times" required>
+                                <option value="2" {% if semana.max_times == 2 %}selected{% endif %}>2 Times</option>
+                                <option value="3" {% if semana.max_times == 3 %}selected{% endif %}>3 Times</option>
+                                <option value="4" {% if semana.max_times == 4 %}selected{% endif %}>4 Times</option>
+                                <option value="5" {% if semana.max_times == 5 %}selected{% endif %}>5 Times</option>
+                                <option value="6" {% if semana.max_times == 6 %}selected{% endif %}>6 Times</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="max_jogadores_por_time" class="form-label">Jogadores por Time *</label>
+                            <select class="form-select" id="max_jogadores_por_time" name="max_jogadores_por_time" required>
+                                <option value="4" {% if semana.max_jogadores_por_time == 4 %}selected{% endif %}>4 jogadores</option>
+                                <option value="5" {% if semana.max_jogadores_por_time == 5 %}selected{% endif %}>5 jogadores</option>
+                                <option value="6" {% if semana.max_jogadores_por_time == 6 %}selected{% endif %}>6 jogadores</option>
+                                <option value="7" {% if semana.max_jogadores_por_time == 7 %}selected{% endif %}>7 jogadores</option>
+                                <option value="8" {% if semana.max_jogadores_por_time == 8 %}selected{% endif %}>8 jogadores</option>
+                                <option value="9" {% if semana.max_jogadores_por_time == 9 %}selected{% endif %}>9 jogadores</option>
+                                <option value="10" {% if semana.max_jogadores_por_time == 10 %}selected{% endif %}>10 jogadores</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="modo_draft" class="form-label">Modo do Draft *</label>
+                            <select class="form-select" id="modo_draft" name="modo_draft" required>
+                                <option value="snake" {% if semana.modo_draft == 'snake' %}selected{% endif %}>Snake Draft (recomendado)</option>
+                                <option value="linear" {% if semana.modo_draft == 'linear' %}selected{% endif %}>Linear</option>
+                            </select>
+                            <div class="form-text">
+                                <strong>Snake:</strong> 1-2-3-3-2-1 (alterna ordem)<br>
+                                <strong>Linear:</strong> 1-2-3-1-2-3 (mantém ordem)
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="tempo_por_escolha" class="form-label">Tempo por Escolha (segundos)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="tempo_por_escolha" 
+                                       name="tempo_por_escolha" value="{{ semana.tempo_escolha }}" min="0" max="300" step="5">
+                                <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tempo_por_escolha').value = '0'">
+                                    Sem tempo
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <strong>0 segundos:</strong> Sem limite de tempo<br>
+                                <strong>30-60 segundos:</strong> Recomendado
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Requisitos para iniciar:</h6>
+                        <ul class="mb-0">
+                            <li>Lista de presença deve estar fechada</li>
+                            <li>Número suficiente de capitães confirmados: <strong id="capitaesNecessarios">2</strong></li>
+                            <li>Número suficiente de jogadores confirmados: <strong id="jogadoresNecessarios">12</strong></li>
+                            <li>Atualmente confirmados: <strong>{{ confirmados }}</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Configurações e Iniciar Draft
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+.badge {
+    font-weight: 500;
+}
+.btn {
+    font-weight: 500;
+}
+.rounded-circle {
+    flex-shrink: 0;
+}
+</style>
+
+<script>
+// Script para melhorar a experiência do usuário
+$(document).ready(function() {
+    // Calcula requisitos dinamicamente
+    function calcularRequisitos() {
+        const maxTimes = parseInt($('#max_times').val()) || 2;
+        const maxJogadores = parseInt($('#max_jogadores_por_time').val()) || 6;
+        
+        $('#capitaesNecessarios').text(maxTimes);
+        $('#jogadoresNecessarios').text(maxTimes * maxJogadores);
+    }
+    
+    $('#max_times, #max_jogadores_por_time').change(calcularRequisitos);
+    calcularRequisitos();
+    
+    // Auto-refresh se draft estiver em andamento
+    {% if semana.draft_em_andamento %}
+    setInterval(() => {
+        fetch('/api/draft/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.draft_em_andamento) {
+                // Verifica se há mudanças importantes
+                if (data.escolha_atual !== {{ draft_status.escolha_atual if draft_status else 0 }}) {
+                    // Recarrega se houve nova escolha
+                    location.reload();
+                }
+            }
+        });
+    }, 5000); // 5 segundos
+    
+    // SocketIO para atualizações em tempo real
+    try {
+        const socket = io();
+        
+        socket.on('draft_update', function(data) {
+            if (data.semana_id === {{ semana.id }}) {
+                // Recarrega após 1 segundo
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+        
+        socket.on('connect_error', function(error) {
+            console.log('SocketIO offline, usando polling...');
+        });
+    } catch (e) {
+        console.log('SocketIO não disponível');
+    }
+    {% endif %}
+    
+    // Confirmação extra para reiniciar semana
+    $('#reiniciarModal .btn-danger[href*="reiniciar_semana"]').click(function(e) {
+        if (!confirm('TEM CERTEZA ABSOLUTA?\n\nEsta ação apagará TODOS os dados da semana atual e não poderá ser desfeita!')) {
+            e.preventDefault();
+            $('#reiniciarModal').modal('hide');
+        }
+    });
+});
+</script>
+{% endblock %}

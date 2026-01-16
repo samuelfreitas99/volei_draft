@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+
+{% block title %}Painel do Capitão - Sistema de Vôlei{% endblock %}
+
+{% block head %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/draft.css') }}">
+
+<style>
+    .jogador-card {
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    .jogador-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .jogador-card.selected {
+        border: 2px solid #198754;
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    .timer-display {
+        font-size: 2rem;
+        font-weight: bold;
+        font-family: 'Courier New', monospace;
+    }
+    .time-card {
+        border-left: 4px solid;
+    }
+    .timer-warning {
+        color: #dc3545;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Status do Draft -->
+        <div class="card mb-4">
+            <div class="card-header {% if minha_vez %}bg-warning text-dark{% else %}bg-secondary text-white{% endif %}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-crown"></i> Painel do Capitão
+                    </h5>
+                    {% if minha_vez and draft_status and draft_status.tempo_restante > 0 %}
+                    <div class="timer-display {% if draft_status.tempo_restante <= 10 %}timer-warning{% endif %}" id="timer">
+                        {{ draft_status.tempo_restante }}s
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if not semana.draft_em_andamento and not semana.draft_finalizado %}
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-clock"></i> Aguardando Draft</h5>
+                    <p class="mb-0">O draft ainda não foi iniciado para esta semana.</p>
+                </div>
+                {% elif semana.draft_finalizado %}
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle"></i> Draft Finalizado</h5>
+                    <p class="mb-0">O draft foi concluído para esta semana.</p>
+                </div>
+                {% elif minha_vez %}
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-bullhorn"></i> É A SUA VEZ DE ESCOLHER!</h5>
+                    <p class="mb-0">
+                        {% if draft_status.tempo_restante > 0 %}
+                        Você tem <strong id="timeLeft">{{ draft_status.tempo_restante }}</strong> segundos para escolher.
+                        {% else %}
+                        Escolha um jogador abaixo. Não há limite de tempo.
+                        {% endif %}
+                    </p>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-clock"></i> AGUARDANDO SUA VEZ</h5>
+                    <p class="mb-0">
+                        Vez atual: <strong>{{ draft_status.vez_capitao.nome if draft_status.vez_capitao else 'Nenhum' }}</strong><br>
+                        Rodada: {{ draft_status.rodada_atual if draft_status else '0' }} • 
+                        Escolha: {{ draft_status.escolha_atual if draft_status else '0' }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if time %}
+                <!-- Suas Escolhas -->
+                <h6 class="mt-4 mb-3">Seus Jogadores:</h6>
+                {% if minhas_escolhas %}
+                <div class="row">
+                    {% for escolha in minhas_escolhas %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card border-success h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start mb-2">
+                                    {% if escolha.jogador.foto_perfil %}
+                                    <div class="me-2">
+                                        <img src="{{ escolha.jogador.foto_perfil }}" 
+                                            alt="{{ escolha.jogador.nome }}" 
+                                            class="rounded-circle" 
+                                            width="40" 
+                                            height="40"
+                                            style="object-fit: cover;">
+                                    </div>
+                                    {% else %}
+                                    <div class="me-2">
+                                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                            style="width: 40px; height: 40px; background-color: #e9ecef;">
+                                            <i class="fas fa-user text-muted"></i>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="card-title mb-0">{{ escolha.jogador.nome }}</h6>
+                                        {% if escolha.jogador.apelido %}
+                                        <small class="text-muted">"{{ escolha.jogador.apelido }}"</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if escolha.jogador.posicao %}
+                                        <span class="badge bg-info">{{ get_posicao_display(escolha.jogador.posicao) }}</span>
+                                        {% endif %}
+                                        <span class="badge {% if escolha.jogador.nivel == 'iniciante' %}bg-info
+                                                        {% elif escolha.jogador.nivel == 'intermediario' %}bg-primary
+                                                        {% else %}bg-warning{% endif %}">
+                                            {{ get_nivel_display(escolha.jogador.nivel) }}
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">R{{ escolha.round_num }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">
+                    <i class="fas fa-users-slash"></i> Você ainda não escolheu nenhum jogador.
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Jogadores Disponíveis -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Jogadores Disponíveis</h5>
+                    <span class="badge bg-light text-dark">{{ jogadores_disponiveis|length }}</span>
+                </div>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if jogadores_disponiveis %}
+                    <div id="jogadoresList">
+                        {% for jogador in jogadores_disponiveis %}
+                        <div class="card jogador-card mb-3" data-jogador-id="{{ jogador.id }}">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    {% if jogador.foto_perfil %}
+                                    <div class="me-3">
+                                        <img src="{{ jogador.foto_perfil }}" 
+                                            alt="{{ jogador.nome }}" 
+                                            class="rounded-circle" 
+                                            width="50" 
+                                            height="50"
+                                            style="object-fit: cover;">
+                                    </div>
+                                    {% else %}
+                                    <div class="me-3">
+                                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                            style="width: 50px; height: 50px; background-color: #e9ecef;">
+                                            <i class="fas fa-user text-muted"></i>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ jogador.nome }}</h6>
+                                        {% if jogador.apelido %}
+                                            <small class="text-muted">"{{ jogador.apelido }}"</small><br>
+                                        {% endif %}
+                                        <div class="mt-2">
+                                            {% if jogador.posicao %}
+                                            <span class="badge bg-info me-1">{{ get_posicao_display(jogador.posicao) }}</span>
+                                            {% endif %}
+                                            <span class="badge me-1 {% if jogador.nivel == 'iniciante' %}bg-info
+                                                                {% elif jogador.nivel == 'intermediario' %}bg-primary
+                                                                {% else %}bg-warning{% endif %}">
+                                                {{ get_nivel_display(jogador.nivel) }}
+                                            </span>
+                                            {% if jogador.mensalista %}
+                                            <span class="badge bg-success">Mensalista</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if minha_vez %}
+                                    <div class="align-self-center">
+                                        <button class="btn btn-sm btn-success escolher-btn" 
+                                                data-jogador-id="{{ jogador.id }}"
+                                                data-jogador-nome="{{ jogador.nome }}">
+                                            <i class="fas fa-plus"></i> Escolher
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">
+                        {% if semana.draft_em_andamento %}
+                        <i class="fas fa-check-circle"></i> Todos os jogadores já foram escolhidos.
+                        {% else %}
+                        <i class="fas fa-users"></i> Aguardando início do draft.
+                        {% endif %}
+                    </p>
+                {% endif %}
+            </div>
+            
+            {% if minha_vez and jogadores_disponiveis %}
+            <div class="card-footer">
+                <div class="d-grid">
+                    <button id="autoEscolherBtn" class="btn btn-outline-primary">
+                        <i class="fas fa-robot"></i> Escolher Melhor Disponível
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Outros Times -->
+{% if times %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Progresso dos Times</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for outro_time in times %}
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="card time-card" style="border-left-color: {{ outro_time.cor }};">
+                            <div class="card-header" style="background-color: {{ outro_time.cor }}; color: white;">
+                                <h6 class="mb-0">
+                                    {{ outro_time.nome }}
+                                    <small>({{ outro_time.capitao.nome if outro_time.capitao else 'Sem capitão' }})</small>
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% set escolhas_time = outro_time.escolhas.all() %}
+                                <div class="list-group list-group-flush">
+                                    {% for escolha in escolhas_time %}
+                                    <div class="list-group-item py-2">
+                                        <small>{{ escolha.jogador.nome }}</small>
+                                        <span class="badge bg-secondary float-end">R{{ escolha.round_num }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="text-center mt-2">
+                                    <span class="badge bg-secondary">
+                                        {{ escolhas_time|length }}/{{ MAX_JOGADORES_POR_TIME }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Confirmação -->
+<div class="modal fade" id="confirmacaoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Escolha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja escolher <strong id="jogadorNome"></strong> para o seu time?</p>
+                <p class="text-muted small">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="confirmarEscolhaBtn" class="btn btn-success">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let socket;
+let tempoRestante = {{ draft_status.tempo_restante if draft_status else 0 }};
+let intervalo;
+let jogadorSelecionado = null;
+
+$(document).ready(function() {
+    // Conectar ao SocketIO
+    socket = io();
+    
+    // Entrar na sala do draft
+    socket.emit('join_draft', { 
+        semana_id: {{ semana.id }},
+        user_id: {{ current_user.id if current_user.is_authenticated else 0 }}
+    });
+    
+    // Timer (se houver tempo)
+    {% if minha_vez and draft_status and draft_status.tempo_restante > 0 %}
+    startTimer();
+    {% endif %}
+    
+    // Escolher jogador
+    $('.escolher-btn').click(function() {
+        jogadorSelecionado = {
+            id: $(this).data('jogador-id'),
+            nome: $(this).data('jogador-nome')
+        };
+        
+        $('#jogadorNome').text(jogadorSelecionado.nome);
+        $('#confirmacaoModal').modal('show');
+    });
+    
+    // Escolher automaticamente
+    $('#autoEscolherBtn').click(function() {
+        if ($('#jogadoresList .jogador-card').length > 0) {
+            const primeiroJogador = $('#jogadoresList .jogador-card').first();
+            const btn = primeiroJogador.find('.escolher-btn');
+            
+            jogadorSelecionado = {
+                id: btn.data('jogador-id'),
+                nome: btn.data('jogador-nome')
+            };
+            
+            escolherJogador();
+        }
+    });
+    
+    // Confirmar escolha
+    $('#confirmarEscolhaBtn').click(function() {
+        $('#confirmacaoModal').modal('hide');
+        escolherJogador();
+    });
+    
+    // Receber atualizações do draft
+    socket.on('draft_update', function(data) {
+        if (data.semana_id == {{ semana.id }}) {
+            location.reload(); // Recarrega para mostrar atualizações
+        }
+    });
+    
+    // Receber status do draft
+    socket.on('draft_status_update', function(data) {
+        if (data.semana_id == {{ semana.id }}) {
+            // Atualiza informações em tempo real
+            if (data.vez_capitao_id != null) {
+                // Atualiza timer se for sua vez
+                if (data.vez_capitao_id == {{ current_user.jogador_id }}) {
+                    if (data.tempo_restante > 0) {
+                        tempoRestante = data.tempo_restante;
+                        if (!intervalo) {
+                            startTimer();
+                        }
+                    }
+                } else {
+                    stopTimer();
+                }
+            }
+        }
+    });
+});
+
+function startTimer() {
+    intervalo = setInterval(function() {
+        tempoRestante--;
+        
+        // Atualizar display
+        if ($('#timer').length > 0) {
+            $('#timer').text(tempoRestante + 's');
+        }
+        if ($('#timeLeft').length > 0) {
+            $('#timeLeft').text(tempoRestante);
+        }
+        
+        // Alerta visual quando tempo está acabando
+        if (tempoRestante <= 10) {
+            $('#timer').addClass('timer-warning');
+        }
+        
+        // Se tempo acabou
+        if (tempoRestante <= 0) {
+            stopTimer();
+            // Escolher automaticamente
+            if ($('#autoEscolherBtn').is(':visible')) {
+                $('#autoEscolherBtn').click();
+            }
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (intervalo) {
+        clearInterval(intervalo);
+        intervalo = null;
+    }
+}
+
+function escolherJogador() {
+    if (!jogadorSelecionado) return;
+    
+    // Desativa botões para evitar múltiplos cliques
+    $('.escolher-btn').prop('disabled', true);
+    $('#autoEscolherBtn').prop('disabled', true);
+    
+    // Cria formulário simples
+    const formData = new FormData();
+    formData.append('jogador_id', jogadorSelecionado.id);
+    
+    fetch('{{ url_for("capitao_escolher") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Emite evento via socket
+            socket.emit('draft_update', {
+                semana_id: {{ semana.id }},
+                action: 'jogador_escolhido',
+                jogador_id: jogadorSelecionado.id
+            });
+            
+            if (data.draft_finalizado) {
+                alert('Draft finalizado! ' + data.message);
+                location.reload();
+            } else {
+                // Recarrega após 1 segundo
+                setTimeout(() => location.reload(), 1000);
+            }
+        } else {
+            alert('Erro: ' + data.message);
+            // Reativa botões
+            $('.escolher-btn').prop('disabled', false);
+            $('#autoEscolherBtn').prop('disabled', false);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao enviar escolha. Tente novamente.');
+        // Reativa botões
+        $('.escolher-btn').prop('disabled', false);
+        $('#autoEscolherBtn').prop('disabled', false);
+    });
+}
+
+// Atualização periódica do status
+setInterval(function() {
+    fetch('/api/draft/status')
+    .then(response => response.json())
+    .then(data => {
+        if (data.draft_em_andamento) {
+            // Atualiza informações básicas
+            if (data.vez_capitao_id == {{ current_user.jogador_id }}) {
+                // Sua vez
+                if (!intervalo && data.tempo_restante > 0) {
+                    tempoRestante = data.tempo_restante;
+                    startTimer();
+                }
+                
+                // Atualiza tempo restante
+                if ($('#timer').length > 0 && data.tempo_restante > 0) {
+                    $('#timer').text(data.tempo_restante + 's');
+                    $('#timeLeft').text(data.tempo_restante);
+                    
+                    if (data.tempo_restante <= 10) {
+                        $('#timer').addClass('timer-warning');
+                    } else {
+                        $('#timer').removeClass('timer-warning');
+                    }
+                }
+            } else {
+                // Não é sua vez
+                stopTimer();
+            }
+        }
+    })
+    .catch(error => console.error('Erro ao buscar status:', error));
+}, 3000);
+
+// Efeito visual nos cards de jogador
+$('#jogadoresList').on('mouseenter', '.jogador-card', function() {
+    $(this).addClass('selected');
+}).on('mouseleave', '.jogador-card', function() {
+    $(this).removeClass('selected');
+});
+
+// Exibir mensagens do socket
+socket.on('message', function(data) {
+    if (data.message) {
+        console.log('Mensagem:', data.message);
+    }
+});
+
+// Notificação de erro
+socket.on('error', function(data) {
+    console.error('Erro Socket:', data.error);
+});
+
+// Auto-refresh para draft em andamento
+{% if semana.draft_em_andamento %}
+// Atualiza o status a cada 3 segundos
+setInterval(() => {
+    fetch('/api/draft/status')
+    .then(response => response.json())
+    .then(data => {
+        // Atualiza timer se houver mudanças
+        if (data.tempo_restante !== {{ draft_status.tempo_restante if draft_status else 0 }}) {
+            location.reload();
+        }
+    });
+}, 3000);
+{% endif %}
+
+// SocketIO para atualizações em tempo real
+try {
+    const socket = io();
+    
+    socket.on('draft_update', function(data) {
+        if (data.semana_id === {{ semana.id }}) {
+            // Recarrega após 1 segundo
+            setTimeout(() => location.reload(), 1000);
+        }
+    });
+    
+    socket.on('connect_error', function(error) {
+        console.log('SocketIO offline, usando polling...');
+    });
+} catch (e) {
+    console.log('SocketIO não disponível');
+}
+
+</script>
+{% endblock %}

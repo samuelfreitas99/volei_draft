@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+
+{% block title %}Draft ao Vivo{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/draft.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set MAX_JOGADORES_POR_TIME = semana.max_jogadores_por_time %}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Draft ao Vivo</h2>
+                <div class="badge bg-primary fs-6">Draft da Semana - {{ semana.data|format_date }}</div>
+            </div>
+            
+            {% if not semana.draft_em_andamento and not semana.draft_finalizado %}
+            <div class="alert alert-warning">
+                <h4><i class="fas fa-exclamation-triangle"></i> Draft não iniciado</h4>
+                <p>O draft ainda não foi iniciado para esta semana.</p>
+            </div>
+            {% elif semana.draft_finalizado %}
+            <div class="alert alert-success">
+                <h4><i class="fas fa-check-circle"></i> Draft Finalizado!</h4>
+                <p>O draft foi concluído. Confira os times formados abaixo.</p>
+            </div>
+            {% endif %}
+            
+            <!-- Status do Draft -->
+            {% if draft_status and semana.draft_em_andamento %}
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-clock"></i> Status do Draft
+                                </h5>
+                                <div>
+                                    <span class="badge bg-primary">Rodada {{ draft_status.rodada_atual }}</span>
+                                    <span class="badge bg-primary">Escolha #{{ draft_status.escolha_atual }}</span>
+                                    {% if draft_status.tempo_restante %}
+                                    <span class="badge bg-warning">{{ draft_status.tempo_restante }}s</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Vez do capitão:</strong> {{ draft_status.vez_capitao|get_jogador_nome }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    {% if draft_status.tempo_restante and draft_status.tempo_restante < 10 %}
+                                    <div class="progress">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-danger" 
+                                             role="progressbar" 
+                                             style="width: {{ (draft_status.tempo_restante / semana.tempo_escolha) * 100 }}%">
+                                            {{ draft_status.tempo_restante }}s
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Times -->
+            <div class="row">
+                {% for time in times %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header" style="background-color: {{ time.cor }}; color: white;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">{{ time.nome }}</h5>
+                                <span class="badge bg-light text-dark">
+                                    {{ escolhas_por_time[time.id]|default([])|length }}/{{ MAX_JOGADORES_POR_TIME }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <p class="mb-1">
+                                    <strong>Capitão:</strong> {{ time.capitao.nome }}
+                                </p>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Jogador</th>
+                                            <th>Posição</th>
+                                            <th>Nível</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for escolha in escolhas_por_time[time.id]|default([]) %}
+                                        <tr>
+                                            <td>{{ escolha.ordem_escolha }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    {% if escolha.jogador.foto_perfil %}
+                                                    <div class="me-3">
+                                                        <img src="{{ escolha.jogador.foto_perfil }}" 
+                                                            alt="{{ escolha.jogador.nome }}" 
+                                                            class="rounded-circle" 
+                                                            width="40" 
+                                                            height="40"
+                                                            style="object-fit: cover;">
+                                                    </div>
+                                                    {% else %}
+                                                    <div class="me-3">
+                                                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                                            style="width: 40px; height: 40px; background-color: #e9ecef;">
+                                                            <i class="fas fa-user text-muted"></i>
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
+                                                    <div>
+                                                        <strong>{{ escolha.jogador.nome }}</strong>
+                                                        {% if escolha.jogador.apelido %}
+                                                        <br><small class="text-muted">"{{ escolha.jogador.apelido }}"</small>
+                                                        {% endif %}
+                                                        {% if escolha.round_num == 0 %}
+                                                        <span class="badge bg-warning ms-1">Capitão</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    {{ escolha.jogador.posicao|get_posicao_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">
+                                                    {{ escolha.jogador.nivel|get_nivel_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        
+                                        {% set num_escolhas = escolhas_por_time[time.id]|default([])|length %}
+                                        {% for i in range(num_escolhas, MAX_JOGADORES_POR_TIME) %}
+                                        <tr class="table-light">
+                                            <td>{{ i + 1 }}</td>
+                                            <td colspan="3" class="text-center text-muted">
+                                                <small><i class="fas fa-user-plus"></i> Vaga #{{ i + 1 }}</small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Jogadores Disponíveis (só se draft em andamento) -->
+            {% if semana.draft_em_andamento %}
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-users"></i> Jogadores Disponíveis
+                                <span class="badge bg-primary float-end">{{ jogadores_disponiveis|length }}</span>
+                            </h5>
+                        </div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            {% if jogadores_disponiveis %}
+                            <div class="row">
+                                {% for jogador in jogadores_disponiveis %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-info h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-start">
+                                                {% if jogador.foto_perfil %}
+                                                <div class="me-3">
+                                                    <img src="{{ jogador.foto_perfil }}" 
+                                                        alt="{{ jogador.nome }}" 
+                                                        class="rounded-circle" 
+                                                        width="60" 
+                                                        height="60"
+                                                        style="object-fit: cover;">
+                                                </div>
+                                                {% else %}
+                                                <div class="me-3">
+                                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                                        style="width: 60px; height: 60px; background-color: #e9ecef;">
+                                                        <i class="fas fa-user fa-lg text-muted"></i>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ jogador.nome }}</h6>
+                                                    {% if jogador.apelido %}
+                                                    <small class="text-muted">"{{ jogador.apelido }}"</small>
+                                                    {% endif %}
+                                                    <div class="mt-2">
+                                                        {% if jogador.posicao %}
+                                                        <span class="badge bg-info me-1">{{ jogador.posicao|get_posicao_display }}</span>
+                                                        {% endif %}
+                                                        <span class="badge me-1 {% if jogador.nivel == 'iniciante' %}bg-info
+                                                                            {% elif jogador.nivel == 'intermediario' %}bg-primary
+                                                                            {% else %}bg-warning{% endif %}">
+                                                            {{ jogador.nivel|get_nivel_display }}
+                                                        </span>
+                                                        {% if jogador.mensalista %}
+                                                        <span class="badge bg-success">Mensalista</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-center text-muted">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i><br>
+                                Todos os jogadores já foram escolhidos!
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Histórico das Escolhas -->
+            {% if semana.draft_finalizado %}
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-history"></i> Resumo do Draft</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Ordem das Escolhas:</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Jogador</th>
+                                                    <th>Time</th>
+                                                    <th>Rodada</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% set todas_escolhas = [] %}
+                                                {% for time in times %}
+                                                    {% for escolha in escolhas_por_time[time.id]|default([]) %}
+                                                        {% set _ = todas_escolhas.append(escolha) %}
+                                                    {% endfor %}
+                                                {% endfor %}
+                                                
+                                                {% set todas_escolhas_ordenadas = todas_escolhas|sort(attribute='ordem_escolha') %}
+                                                
+                                                {% for escolha in todas_escolhas_ordenadas %}
+                                                <tr>
+                                                    <td>{{ escolha.ordem_escolha }}</td>
+                                                    <td>
+                                                        {{ escolha.jogador.nome }}
+                                                        {% if escolha.round_num == 0 %}
+                                                        <span class="badge bg-warning ms-1">C</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% for time in times %}
+                                                            {% if time.id == escolha.time_id %}
+                                                            <span class="badge" style="background-color: {{ time.cor }}; color: white;">
+                                                                {{ time.nome }}
+                                                            </span>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </td>
+                                                    <td>
+                                                        {% if escolha.round_num == 0 %}
+                                                        Capitão
+                                                        {% else %}
+                                                        R{{ escolha.round_num }}
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Estatísticas:</h6>
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <p><strong>Total de jogadores:</strong> {{ todas_escolhas|length }}</p>
+                                            <p><strong>Rodadas realizadas:</strong> {{ draft_status.rodada_atual if draft_status else 1 }}</p>
+                                            <p><strong>Modo do draft:</strong> {% if draft_status and draft_status.modo_snake %}Snake{% else %}Linear{% endif %}</p>
+                                            
+                                            <h6 class="mt-3">Distribuição por Posição:</h6>
+                                            <ul class="list-group list-group-flush">
+                                                {% set posicoes = {} %}
+                                                {% for escolha in todas_escolhas %}
+                                                    {% set posicao = escolha.jogador.posicao or 'Não informada' %}
+                                                    {% if posicao not in posicoes %}
+                                                        {% set _ = posicoes.update({posicao: 1}) %}
+                                                    {% else %}
+                                                        {% set _ = posicoes.update({posicao: posicoes[posicao] + 1}) %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                
+                                                {% for posicao, quantidade in posicoes.items() %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    {{ posicao|get_posicao_display }}
+                                                    <span class="badge bg-primary rounded-pill">{{ quantidade }}</span>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% elif semana.draft_em_andamento %}
+            <!-- Histórico em tempo real -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-history"></i> Histórico das Escolhas
+                                <span class="badge bg-primary float-end">#{{ draft_status.escolha_atual - 1 }}</span>
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="historico-escolhas" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Histórico será carregado via JavaScript -->
+                                <div class="text-center text-muted">
+                                    <p>Aguardando primeira escolha...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if semana.draft_em_andamento %}
+    const socket = io();
+    
+    // Entrar na sala do draft
+    socket.emit('join_draft', { semana_id: {{ semana.id }} });
+    
+    // Solicitar status atual do draft
+    socket.emit('request_draft_status', { semana_id: {{ semana.id }} });
+    
+    // Atualizar status quando receber atualização
+    socket.on('draft_status_update', function(data) {
+        console.log('Status atualizado:', data);
+        
+        // Atualizar dados da página sem recarregar
+        if (data.vez_capitao_id) {
+            // Atualizar vez do capitão
+            const vezElement = document.querySelector('.card-body p strong');
+            if (vezElement && vezElement.textContent.includes('Vez do capitão:')) {
+                vezElement.parentElement.innerHTML = `<strong>Vez do capitão:</strong> ${getJogadorName(data.vez_capitao_id)}`;
+            }
+            
+            // Atualizar rodada e escolha
+            const rodadaElement = document.querySelector('.badge.bg-primary:first-child');
+            const escolhaElement = document.querySelector('.badge.bg-primary:nth-child(2)');
+            if (rodadaElement) rodadaElement.textContent = `Rodada ${data.rodada_atual}`;
+            if (escolhaElement) escolhaElement.textContent = `Escolha #${data.escolha_atual}`;
+        }
+    });
+    
+    // Atualizar quando houver nova escolha
+    socket.on('draft_update', function(data) {
+        console.log('Nova escolha recebida:', data);
+        
+        // Adicionar ao histórico
+        const historicoDiv = document.getElementById('historico-escolhas');
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        // Encontrar cor do time
+        let timeCor = '#3498db'; // cor padrão
+        let timeNome = data.time_nome || 'Time ' + data.time_id;
+        
+        // Criar nova entrada no histórico
+        const newEntry = document.createElement('div');
+        newEntry.className = 'alert alert-light border mb-2';
+        newEntry.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-secondary me-2">#${data.escolha_atual}</span>
+                    <span class="badge me-2" style="background-color: ${timeCor}; color: white;">
+                        ${timeNome}
+                    </span>
+                    <strong>${data.jogador_nome}</strong>
+                    <small class="text-muted">escolhido por</small>
+                    <strong>${data.capitao_nome}</strong>
+                </div>
+                <small class="text-muted">${timeString}</small>
+            </div>
+        `;
+        
+        // Adicionar no topo do histórico
+        if (historicoDiv.firstChild && historicoDiv.firstChild.classList.contains('text-center')) {
+            historicoDiv.innerHTML = '';
+        }
+        
+        historicoDiv.insertBefore(newEntry, historicoDiv.firstChild);
+        
+        // Atualizar contador no header
+        const contadorElement = document.querySelector('.float-end.badge');
+        if (contadorElement) {
+            contadorElement.textContent = `#${data.escolha_atual}`;
+        }
+        
+        // Recarregar a página após 2 segundos para atualizar tudo
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    });
+    
+    // Atualizar a página a cada 60 segundos se o draft estiver em andamento
+    setInterval(() => {
+        location.reload();
+    }, 60000);
+    
+    // Função auxiliar para obter nome do jogador (simplificada)
+    function getJogadorName(jogadorId) {
+        // Esta função seria implementada se tivéssemos uma API
+        // Por enquanto retorna um placeholder
+        return 'Capitão #' + jogadorId;
+    }
+    {% endif %}
+});
+
+// Auto-refresh para página pública do draft
+{% if semana.draft_em_andamento %}
+// Atualiza a cada 5 segundos se draft estiver em andamento
+setInterval(() => {
+    fetch('/api/draft/status')
+    .then(response => response.json())
+    .then(data => {
+        // Se houve mudança, recarrega
+        if (data.escolha_atual !== {{ draft_status.escolha_atual if draft_status else 0 }}) {
+            location.reload();
+        }
+    });
+}, 5000);
+
+// Conectar ao SocketIO para atualizações em tempo real
+try {
+    const socket = io();
+    
+    socket.on('draft_update', function(data) {
+        if (data.semana_id === {{ semana.id }}) {
+            // Recarrega após 1 segundo para dar tempo do servidor processar
+            setTimeout(() => location.reload(), 1000);
+        }
+    });
+    
+    socket.on('connect_error', function(error) {
+        console.log('SocketIO offline, usando polling...');
+    });
+} catch (e) {
+    console.log('SocketIO não disponível');
+}
+{% endif %}
+</script>
+{% endblock %}

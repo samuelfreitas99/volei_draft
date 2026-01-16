@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Sistema de Vôlei{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user"></i> Usuário
+                        </label>
+                        <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i> Senha
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> Entrar
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="mb-2">Não tem uma conta?</p>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-plus"></i> Criar Conta
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-footer text-muted text-center small">
+                <p class="mb-0">
+                    <i class="fas fa-info-circle"></i> 
+                    Capitães: Use o usuário e senha fornecidos pelo administrador.
+                </p>
+                <p class="mb-0">
+                    Admin padrão: admin / admin123
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

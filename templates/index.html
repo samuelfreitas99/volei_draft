@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+
+{% block title %}Início - Sistema de Vôlei{% endblock %}
+
+{% block content %}
+<!-- Seção de Recados -->
+{% if recados %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bullhorn"></i> Recados Importantes
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for recado in recados %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 {% if recado.importante %}border-danger{% endif %}">
+                            <div class="card-header {% if recado.importante %}bg-danger text-white{% else %}bg-light{% endif %}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">{{ recado.titulo }}</h6>
+                                    {% if recado.importante %}
+                                    <span class="badge bg-warning">IMPORTANTE</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">{{ recado.conteudo }}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-user"></i> {{ recado.autor }} • 
+                                    <i class="fas fa-calendar"></i> {{ format_date(recado.data_publicacao, '%d/%m/%Y %H:%M') }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Status da Semana -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-calendar-alt"></i> Semana de {{ semana.data.strftime('%d/%m/%Y') }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Lista de Presença</h6>
+                                {% if semana.lista_aberta %}
+                                    <span class="badge bg-success">ABERTA</span>
+                                {% elif semana.lista_encerrada %}
+                                    <span class="badge bg-danger">FECHADA</span>
+                                {% else %}
+                                    <span class="badge bg-warning">INDEFINIDA</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Draft</h6>
+                                {% if semana.draft_em_andamento %}
+                                    <span class="badge bg-warning">EM ANDAMENTO</span>
+                                {% elif semana.draft_finalizado %}
+                                    <span class="badge bg-success">FINALIZADO</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">NÃO INICIADO</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Confirmados</h6>
+                                <h3>{{ total_confirmados }}</h3>
+                                <small>Jogadores</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Configurações da Semana -->
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-cog"></i>
+                    <strong>Configurações:</strong> {{ semana.max_times }} times • 
+                    {{ semana.max_jogadores_por_time }} jogadores por time • 
+                    {{ semana.tempo_escolha }}s por escolha • 
+                    {{ 'Snake' if semana.modo_draft == 'snake' else 'Linear' }} draft
+                </div>
+                
+                <!-- Progresso para o Draft -->
+                {% if semana.lista_aberta and not semana.draft_em_andamento %}
+                    {% set total_vagas = semana.max_times * semana.max_jogadores_por_time %}
+                    {% set percent = (total_confirmados / total_vagas) * 100 %}
+                    {% if percent > 100 %}{% set percent = 100 %}{% endif %}
+                    
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar {% if percent >= 100 %}bg-success{% else %}bg-warning{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ percent }}%;"
+                             aria-valuenow="{{ total_confirmados }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="{{ total_vagas }}">
+                            {{ total_confirmados }} / {{ total_vagas }} jogadores
+                        </div>
+                    </div>
+                    <p class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        Necessário {{ total_vagas }} jogadores confirmados para iniciar o draft.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Lista de Jogadores (apenas se lista aberta) -->
+        {% if semana.lista_aberta %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-clipboard-list"></i> Confirme sua Presença
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Você pode confirmar presença sem fazer login usando o código de segurança: <strong>volei123</strong>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Jogador</th>
+                                <th>Posição</th>
+                                <th>Nível</th>
+                                <th>Status</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for jogador in jogadores %}
+                            {% set confirmacao = confirmacoes.get(jogador.id, {}) %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if jogador.foto_perfil %}
+                                        <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                                             class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ jogador.nome }}</strong>
+                                            {% if jogador.apelido %}
+                                                <br><small class="text-muted">"{{ jogador.apelido }}"</small>
+                                            {% endif %}
+                                            {% if jogador.mensalista %}
+                                                <span class="badge bg-info ms-1">Mensalista</span>
+                                            {% endif %}
+                                            {% if jogador.capitao %}
+                                                <span class="badge bg-warning ms-1">Capitão</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if jogador.posicao %}
+                                        {{ get_posicao_display(jogador.posicao) }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if jogador.nivel %}
+                                        <span class="badge {% if jogador.nivel == 'iniciante' %}bg-info{% elif jogador.nivel == 'intermediario' %}bg-primary{% else %}bg-warning{% endif %}">
+                                            {{ get_nivel_display(jogador.nivel) }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if confirmacao.confirmado %}
+                                        <span class="badge bg-success">Confirmado</span>
+                                    {% elif confirmacao.confirmado == false %}
+                                        <span class="badge bg-danger">Não Confirmado</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Pendente</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-success confirm-btn {% if confirmacao.confirmado %}active{% endif %}"
+                                                data-jogador-id="{{ jogador.id }}"
+                                                data-confirmar="true">
+                                            <i class="fas fa-check"></i> Sim
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger confirm-btn {% if confirmacao.confirmado == false %}active{% endif %}"
+                                                data-jogador-id="{{ jogador.id }}"
+                                                data-confirmar="false">
+                                            <i class="fas fa-times"></i> Não
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Times do Draft (se houver) -->
+        {% if times %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-users"></i> Times Formados
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for time in times %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-header text-white" style="background-color: {{ time.cor }};">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0">{{ time.nome }}</h5>
+                                        <small>
+                                            Capitão: {{ get_jogador_nome(time.capitao_id) }}
+                                            {% if time.capitao and time.capitao.foto_perfil %}
+                                            <img src="{{ time.capitao.foto_perfil }}" alt="{{ time.capitao.nome }}" 
+                                                 class="rounded-circle ms-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-light text-dark">
+                                        {{ time.escolhas.count() }}/{{ semana.max_jogadores_por_time }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    {% for escolha in time.escolhas %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                {% if escolha.jogador.foto_perfil %}
+                                                <img src="{{ escolha.jogador.foto_perfil }}" alt="{{ escolha.jogador.nome }}" 
+                                                     class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                                                {% else %}
+                                                <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center" 
+                                                     style="width: 32px; height: 32px;">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                                {% endif %}
+                                                {{ get_jogador_nome(escolha.jogador_id) }}
+                                            </div>
+                                            <span class="badge bg-secondary">R{{ escolha.round_num }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <!-- Lista de Espera -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock"></i> Lista de Espera
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if lista_espera %}
+                    <div class="list-group">
+                        {% for pessoa in lista_espera %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ pessoa.nome }}</strong>
+                                {% if pessoa.posicao_preferida %}
+                                    <br><small class="text-muted">{{ get_posicao_display(pessoa.posicao_preferida) }}</small>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">{{ pessoa.adicionado_em.strftime('%H:%M') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Ninguém na lista de espera</p>
+                {% endif %}
+                
+                {% if semana.lista_aberta %}
+                <hr>
+                <button class="btn btn-outline-warning w-100" data-bs-toggle="modal" data-bs-target="#esperaModal">
+                    <i class="fas fa-plus"></i> Entrar na Lista de Espera
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Informações Rápidas -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Informações
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Mensalistas Confirmados:</span>
+                        <strong>{{ mensalistas_confirmados }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Total Confirmados:</span>
+                        <strong>{{ total_confirmados }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Times:</span>
+                        <strong>{{ semana.max_times }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Jogadores por Time:</span>
+                        <strong>{{ semana.max_jogadores_por_time }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Total de Vagas:</span>
+                        <strong>{{ semana.max_times * semana.max_jogadores_por_time }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Lista de Espera:</span>
+                        <strong>{{ lista_espera|length }}</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Botão para Visualizar Draft -->
+        {% if semana.draft_em_andamento or semana.draft_finalizado %}
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <a href="{{ url_for('visualizar_draft') }}" class="btn btn-primary btn-lg w-100">
+                    <i class="fas fa-play-circle"></i> Ver Draft
+                </a>
+                <p class="text-muted mt-2 mb-0">
+                    {% if semana.draft_em_andamento %}
+                        Draft em andamento!
+                    {% else %}
+                        Draft finalizado
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Seção de PIX -->
+        {% if pix_infos %}
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-qrcode"></i> Pagamento via PIX
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for pix in pix_infos %}
+                <div class="mb-3">
+                    <h6>{{ pix.nome_recebedor }}</h6>
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control text-center" 
+                               value="{{ pix.chave_pix }}" readonly id="pix-{{ pix.id }}">
+                        <button class="btn btn-outline-success" type="button"
+                                onclick="copiarPIX('pix-{{ pix.id }}', '{{ pix.chave_pix }}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-key"></i> {{ pix.tipo_chave|upper }}
+                        {% if pix.descricao %}
+                        <br>{{ pix.descricao }}
+                        {% endif %}
+                    </small>
+                </div>
+                {% if not loop.last %}<hr>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Lista de Espera -->
+<div class="modal fade" id="esperaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Entrar na Lista de Espera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('entrar_lista_espera') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Completo *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">Telefone (WhatsApp)</label>
+                        <input type="tel" class="form-control" id="telefone" name="telefone" placeholder="(11) 99999-9999">
+                    </div>
+                    <div class="mb-3">
+                        <label for="posicao" class="form-label">Posição Preferida</label>
+                        <select class="form-select" id="posicao" name="posicao">
+                            <option value="">Qualquer</option>
+                            <option value="levantador">Levantador</option>
+                            <option value="ponteiro">Ponteiro</option>
+                            <option value="central">Central</option>
+                            <option value="libero">Líbero</option>
+                            <option value="oposto">Oposto</option>
+                        </select>
+                    </div>
+                    <p class="text-muted small">
+                        <i class="fas fa-info-circle"></i> Você será chamado se houver desistências.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Entrar na Lista</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Código de Segurança -->
+<div class="modal fade" id="codigoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Código de Segurança</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Para confirmar presença, informe o código de segurança:</p>
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="codigoSeguranca" 
+                           placeholder="Código de segurança" required>
+                    <div class="form-text">Use: <code>volei123</code></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="confirmarComCodigo" class="btn btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let jogadorParaConfirmar = null;
+let confirmarAcao = null;
+
+$(document).ready(function() {
+    // Confirmação de presença com modal de código
+    $('.confirm-btn').click(function() {
+        jogadorParaConfirmar = $(this).data('jogador-id');
+        confirmarAcao = $(this).data('confirmar');
+        
+        // Se usuário estiver loggado, confirma diretamente
+        {% if current_user.is_authenticated %}
+            if (confirm('Deseja confirmar presença?')) {
+                confirmarPresencaDireto(jogadorParaConfirmar, confirmarAcao);
+            }
+        {% else %}
+            // Usuário não logado, pede código
+            $('#codigoModal').modal('show');
+        {% endif %}
+    });
+    
+    $('#confirmarComCodigo').click(function() {
+        const codigo = $('#codigoSeguranca').val();
+        
+        if (!codigo) {
+            alert('Por favor, informe o código de segurança!');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ url_for("confirmar_presenca") }}',
+            type: 'POST',
+            data: {
+                jogador_id: jogadorParaConfirmar,
+                confirmar: confirmarAcao,
+                codigo: codigo
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Erro: ' + response.message);
+                    $('#codigoSeguranca').val('');
+                }
+            },
+            error: function() {
+                alert('Erro ao confirmar presença.');
+            },
+            complete: function() {
+                $('#codigoModal').modal('hide');
+                $('#codigoSeguranca').val('');
+            }
+        });
+    });
+    
+    // Função para confirmação direta (usuário logado)
+    function confirmarPresencaDireto(jogadorId, confirmar) {
+        $.ajax({
+            url: '{{ url_for("confirmar_presenca") }}',
+            type: 'POST',
+            data: {
+                jogador_id: jogadorId,
+                confirmar: confirmar,
+                codigo: 'volei123' // Código padrão para usuários logados
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function() {
+                alert('Erro ao confirmar presença.');
+            }
+        });
+    }
+    
+    // Permite usar Enter no modal de código
+    $('#codigoSeguranca').keypress(function(e) {
+        if (e.which === 13) {
+            $('#confirmarComCodigo').click();
+        }
+    });
+});
+
+function copiarPIX(inputId, chave) {
+    // Tenta usar a API moderna
+    navigator.clipboard.writeText(chave).then(() => {
+        showAlert('Chave PIX copiada com sucesso!', 'success');
+    }).catch(err => {
+        // Fallback para navegadores antigos
+        const input = document.getElementById(inputId);
+        input.select();
+        document.execCommand('copy');
+        showAlert('Chave PIX copiada com sucesso!', 'success');
+    });
+}
+
+function showAlert(message, type) {
+    // Cria um toast simples
+    const alert = $(`
+        <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    $('body').append(alert);
+    setTimeout(() => alert.remove(), 3000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Completar Perfil - Sistema de Vôlei{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-edit"></i> Completar Perfil de Jogador
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Complete seu perfil para acessar todas as funcionalidades do sistema.
+                </div>
+                
+                <form method="POST" action="{{ url_for('completar_perfil') }}">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">
+                            <i class="fas fa-user"></i> Nome Completo *
+                        </label>
+                        <input type="text" class="form-control" id="nome" name="nome" 
+                               value="{{ current_user.username if current_user.username != 'admin' else '' }}" required>
+                        <div class="form-text">Seu nome completo como será exibido nas listas.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">
+                            <i class="fas fa-phone"></i> Telefone
+                        </label>
+                        <input type="tel" class="form-control" id="telefone" name="telefone" 
+                               placeholder="(11) 99999-9999">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="posicao" class="form-label">
+                                <i class="fas fa-bullseye"></i> Posição Preferida
+                            </label>
+                            <select class="form-select" id="posicao" name="posicao">
+                                <option value="">Selecione...</option>
+                                <option value="levantador">Levantador</option>
+                                <option value="ponteiro">Ponteiro</option>
+                                <option value="central">Central</option>
+                                <option value="libero">Líbero</option>
+                                <option value="oposto">Oposto</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nivel" class="form-label">
+                                <i class="fas fa-chart-line"></i> Nível
+                            </label>
+                            <select class="form-select" id="nivel" name="nivel" required>
+                                <option value="iniciante">Iniciante</option>
+                                <option value="intermediario" selected>Intermediário</option>
+                                <option value="avancado">Avançado</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Completar Perfil
+                        </button>
+                        <a href="{{ url_for('perfil') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Pular por enquanto
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card-footer text-muted text-center small">
+                <p class="mb-0">
+                    <i class="fas fa-info-circle"></i> 
+                    Você poderá editar estas informações posteriormente em seu perfil.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
