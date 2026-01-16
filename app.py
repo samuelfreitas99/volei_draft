@@ -36,7 +36,11 @@ def allowed_file(filename):
 
 # Inicialização das extensões
 db = SQLAlchemy(app)
-socketio = SocketIO(app, async_mode='threading', cors_allowed_origins='*')
+socketio = SocketIO(app, 
+                   async_mode='eventlet',
+                   cors_allowed_origins='*',
+                   logger=True,
+                   engineio_logger=True)
 
 # Configuração do Flask-Login
 login_manager = LoginManager()
@@ -2444,3 +2448,8 @@ with app.app_context():
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+
+# Por:
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
