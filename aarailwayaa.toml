@@ -1,0 +1,22 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+
+[[services]]
+type = "web"
+name = "web"
+port = 8000
+
+[services.env]
+PORT = "8000"
+FLASK_ENV = "production"
+
+[[services.checks]]
+type = "http"
+path = "/health"
+interval = 30
+timeout = 10
+initialDelay = 15

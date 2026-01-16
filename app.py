@@ -2449,9 +2449,9 @@ with app.app_context():
 # EXECUÇÃO PARA PRODUÇÃO/DEVELOPMENT
 # ======================================================
 
-# ⬇️⬇️⬇️ INSIRA AQUI ⬇️⬇️⬇️
 if __name__ == '__main__':
     import os
+    import sys
     
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get('FLASK_ENV') != 'production'
@@ -2459,20 +2459,27 @@ if __name__ == '__main__':
     print(f"🚀 Iniciando servidor na porta {port}")
     print(f"🔧 Modo debug: {debug}")
     print(f"💻 Sistema: {os.name}")
+    print(f"Python: {sys.version}")
     
-    # Detecta se está no Railway
-    is_railway = os.environ.get('RAILWAY_ENVIRONMENT') == 'production'
+    # Detectar ambiente
+    is_windows = os.name == 'nt'
+    is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
     
-    if is_railway or os.name != 'nt':  # Railway ou Linux/Mac
-        # Para produção no Railway, use configuração otimizada
-        socketio.run(app, 
-                    host='0.0.0.0', 
-                    port=port, 
-                    debug=debug,
-                    allow_unsafe_werkzeug=False)
-    else:  # Windows local
+    print(f"Windows: {is_windows}")
+    print(f"Railway: {is_railway}")
+    
+    if is_windows:
+        # Windows local - usar threading e allow_unsafe_werkzeug
+        print("🔧 Modo: Windows local (threading + unsafe werkzeug)")
         socketio.run(app, 
                     host='0.0.0.0', 
                     port=port, 
                     debug=True,
                     allow_unsafe_werkzeug=True)
+    else:
+        # Linux/Mac/Railway - usar gevent SEM allow_unsafe_werkzeug
+        print("🔧 Modo: Produção/Railway (gevent)")
+        socketio.run(app, 
+                    host='0.0.0.0', 
+                    port=port, 
+                    debug=debug)
