@@ -1,12 +1,13 @@
-venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
 env/
-.vscode/
+venv/
 *.sqlite
 .DS_Store
 static/uploads/
 *.log
+.vscode/
+instance/

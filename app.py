@@ -40,7 +40,7 @@ def allowed_file(filename):
 # Inicialização das extensões
 db = SQLAlchemy(app)
 socketio = SocketIO(app, 
-                   async_mode='threading',  # Mude para threading
+                   async_mode='gevent',  # Use gevent para Railway
                    cors_allowed_origins="*",
                    logger=True,
                    engineio_logger=True)

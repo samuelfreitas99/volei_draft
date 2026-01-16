@@ -2,9 +2,14 @@ Flask==2.3.3
 flask-sqlalchemy==3.0.5
 flask-login==0.6.2
 flask-socketio==5.3.4
-python-socketio==5.9.0
-eventlet==0.33.3
 Werkzeug==2.3.7
 gunicorn==20.1.0
 python-dotenv==1.0.0
-flask-cors==4.0.0
+greenlet==2.0.2
+
+# Para Socket.IO funcione no Railway, use gevent:
+gevent==22.10.2
+gevent-websocket==0.10.1
+
+# Remova eventlet se ainda estiver lá
+# eventlet==0.33.3
