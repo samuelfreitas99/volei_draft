@@ -5,8 +5,3 @@ flask-socketio==5.3.4
 python-socketio==5.9.0
 Werkzeug==2.3.7
 python-dotenv==1.0.0
-gevent==22.10.2
-gevent-websocket==0.10.1
-greenlet==2.0.2
-# Não inclua gunicorn no requirements.txt para Windows
-# gunicorn será instalado apenas no Railway se necessário

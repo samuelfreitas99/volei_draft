@@ -39,8 +39,10 @@ def allowed_file(filename):
 
 # Inicialização das extensões
 db = SQLAlchemy(app)
+
+# ✅ USE THREADING - funciona em Windows, Linux, Railway, tudo!
 socketio = SocketIO(app, 
-                   async_mode='gevent',  # Use gevent para Railway
+                   async_mode='threading',
                    cors_allowed_origins="*",
                    logger=True,
                    engineio_logger=True)
@@ -737,6 +739,15 @@ def configurar_semana(id):
 # ======================================================
 # ROTAS PÚBLICAS
 # ======================================================
+
+@app.route('/health')
+def health_check():
+    """Health check para Railway"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'volei-draft',
+        'timestamp': datetime.utcnow().isoformat()
+    })
 
 @app.route('/')
 def index():
@@ -2451,35 +2462,16 @@ with app.app_context():
 
 if __name__ == '__main__':
     import os
-    import sys
     
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get('FLASK_ENV') != 'production'
     
     print(f"🚀 Iniciando servidor na porta {port}")
     print(f"🔧 Modo debug: {debug}")
-    print(f"💻 Sistema: {os.name}")
-    print(f"Python: {sys.version}")
     
-    # Detectar ambiente
-    is_windows = os.name == 'nt'
-    is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
-    
-    print(f"Windows: {is_windows}")
-    print(f"Railway: {is_railway}")
-    
-    if is_windows:
-        # Windows local - usar threading e allow_unsafe_werkzeug
-        print("🔧 Modo: Windows local (threading + unsafe werkzeug)")
-        socketio.run(app, 
-                    host='0.0.0.0', 
-                    port=port, 
-                    debug=True,
-                    allow_unsafe_werkzeug=True)
-    else:
-        # Linux/Mac/Railway - usar gevent SEM allow_unsafe_werkzeug
-        print("🔧 Modo: Produção/Railway (gevent)")
-        socketio.run(app, 
-                    host='0.0.0.0', 
-                    port=port, 
-                    debug=debug)
+    # Configurações simples que funcionam em todos os ambientes
+    socketio.run(app, 
+                host='0.0.0.0', 
+                port=port, 
+                debug=debug,
+                allow_unsafe_werkzeug=True)
