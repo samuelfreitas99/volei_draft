@@ -9,7 +9,6 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
-from flask_cors import CORS
 
 # ======================================================
 # CONFIGURAÇÃO
@@ -18,7 +17,6 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
-CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configuração do banco de dados
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///volei_draft.db'
@@ -43,7 +41,7 @@ db = SQLAlchemy(app)
 # ✅ USE THREADING - funciona em Windows, Linux, Railway, tudo!
 socketio = SocketIO(app, 
                    async_mode='threading',
-                   cors_allowed_origins="*",
+                   cors_allowed_origins="*",  # ⬅️ Isso já é suficiente
                    logger=True,
                    engineio_logger=True)
 
