@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  web-dev:
+    build: .
+    container_name: volei-draft-dev
+    ports:
+      - "5001:5000"   # ⚠️ PORTA DIFERENTE DA PRODUÇÃO
+    env_file:
+      - .env.dev
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    volumes:
+      - .:/app
+    command: flask run --host=0.0.0.0 --port=5000
+    networks:
+      - dev-network
+
+networks:
+  dev-network:
+    name: volei-draft-dev-network
