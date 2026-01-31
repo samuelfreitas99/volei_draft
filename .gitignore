@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ambiente
+.env
+.env.dev
+
+# Banco local
+instance/
+*.db
+
+# Dumps e backups
+*.sql
+
+# Docker
+*.log
+
+# VSCode
+.vscode/
