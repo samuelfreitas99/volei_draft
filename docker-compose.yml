@@ -10,8 +10,10 @@ services:
     volumes:
       - .:/app
 
+    env_file:
+      - .env
+
     environment:
-      SECRET_KEY: "77ec4e30e37f8a3a80177ee1e6054c13c3925ca1857595bf3516cf27b466bdec9be862c6642336b0abc66b252f91a4aa7968700f3aae34068470ba04642898"
       FLASK_ENV: production
 
     command: >

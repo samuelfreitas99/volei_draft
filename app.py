@@ -7107,13 +7107,14 @@ def criar_admin_padrao():
         db.session.commit()
         print('✅ Usuário admin criado: admin / admin123')
 
+
 with app.app_context():
-    # Cria todas as tabelas do banco de dados
+    # Cria todas as tabelas do banco de dados se ainda não existirem
     db.create_all()
     
     # Cria usuário admin padrão
     criar_admin_padrao()
-    
+
     # Cria configurações globais se não existirem
     if not ConfiguracaoGlobal.query.first():
         config = ConfiguracaoGlobal(
@@ -7124,17 +7125,20 @@ with app.app_context():
         db.session.add(config)
         db.session.commit()
         print('✅ Configurações globais criadas')
-    
+
     # Cria pasta de uploads se não existir
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    
-    # Cria semanas automaticamente baseado na configuração
-    criar_semanas_automaticas()
-    
-    # Verifica se existe semana atual (cria se não existir)
+
+    # Cria semanas automáticas apenas se não houver nenhuma semana no banco
+    if not Semana.query.first():
+        criar_semanas_automaticas()
+        print('✅ Semanas automáticas criadas')
+
+    # Busca semana atual, não criando novas se já existirem
     get_semana_atual()
-    
+
     print('✅ Sistema inicializado com sucesso!')
+
     
 
 # ======================================================
