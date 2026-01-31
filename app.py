@@ -40,7 +40,13 @@ FLASK_ENV = os.getenv("FLASK_ENV", "production")
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_PATH = os.path.join(BASE_DIR, "instance", "volei_draft.db")
 
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL não definida")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # =========================
