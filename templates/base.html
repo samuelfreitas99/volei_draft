@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>{% block title %}Sistema de Vôlei - Draft de Times{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/draft.css') }}">
+    
+    <!-- Bloco para CSS extra das páginas -->
+    {% block extra_css %}{% endblock %}
+    
+    <style>
+        /* Adicione ao seu CSS existente, na seção de estilos para mobile */
+        .logout-mobile {
+            color: #e74c3c !important;
+        }
+
+        .logout-mobile:hover {
+            background-color: rgba(231, 76, 60, 0.1) !important;
+        }
+
+        .logout-mobile.active {
+            background-color: rgba(231, 76, 60, 0.2) !important;
+        }
+
+        /* Ajuste para garantir que todos os itens tenham o mesmo tamanho */
+        .mobile-nav-item {
+            min-width: 0; /* Permite que os itens se ajustem */
+            flex: 1 1 20%; /* Flexível mas com base de 20% */
+            max-width: 20%; /* Máximo de 20% para caber 5 itens */
+        }
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 80px; /* Espaço para o menu mobile */
+        }
+        
+        /* ========== NAVEGAÇÃO SUPERIOR (Desktop e Tablet) ========== */
+        .nav-optimized {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+        
+        .main-nav {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+        
+        .nav-brand {
+            color: white !important;
+            font-weight: 700;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        
+        .nav-brand i {
+            margin-right: 10px;
+            font-size: 1.8rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            flex-grow: 1;
+        }
+        
+        .nav-link-item {
+            margin: 2px;
+        }
+        
+        .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            text-decoration: none;
+            padding: 8px 15px !important;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .nav-link i {
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+        
+        .nav-link:hover {
+            background-color: rgba(255,255,255,0.15);
+            color: white !important;
+            transform: translateY(-2px);
+        }
+        
+        .nav-link.active {
+            background-color: var(--secondary-color);
+            color: white !important;
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* Menu de usuário */
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-menu img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .user-menu img:hover {
+            border-color: rgba(255,255,255,0.7);
+            transform: scale(1.05);
+        }        
+        
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+        }        
+        
+        /* ========== MENU MOBILE (BOTTOM NAVIGATION) ========== */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1050;
+            padding: 10px 0;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+        }
+        
+        .mobile-nav-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #666;
+            flex: 1;
+            padding: 8px 5px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-nav-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .mobile-nav-item.active {
+            color: var(--secondary-color);
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .mobile-nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+        
+        .mobile-nav-text {
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .mobile-nav-user {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .mobile-nav-login {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        /* Botão de sair no mobile - NOVO */
+        .mobile-logout-btn {
+            background-color: transparent;
+            border: none;
+            color: #666;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            flex: 1;
+            padding: 8px 5px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .mobile-logout-btn:hover {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+        
+        /* ========== RESPONSIVIDADE ========== */
+        @media (max-width: 992px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .user-menu {
+                margin-left: auto;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            /* Esconder navegação superior no mobile */
+            .nav-optimized {
+                display: none;
+            }
+            
+            /* Mostrar menu mobile bottom */
+            .mobile-bottom-nav {
+                display: block;
+            }
+            
+            /* Ajustar padding do body */
+            body {
+                padding-bottom: 70px;
+            }
+            
+            /* Ajustar conteúdo principal */
+            main.container {
+                padding-bottom: 20px;
+            }
+            
+            /* Ajustar menu mobile para 5 itens */
+            .mobile-nav-item, .mobile-logout-btn {
+                flex: 0 0 auto;
+                width: 20%;
+            }
+        }
+        
+        /* Telas médias (tablet) */
+        @media (min-width: 769px) and (max-width: 992px) {
+            .nav-links {
+                gap: 3px;
+            }
+            
+            .nav-link {
+                padding: 7px 12px !important;
+                font-size: 0.85rem;
+            }
+            
+            .nav-link i {
+                font-size: 0.9rem;
+            }
+            
+            .user-menu .btn {
+                padding: 5px 10px;
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* ========== CONTEÚDO PRINCIPAL ========== */
+        main {
+            flex: 1;
+            padding-top: 20px;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            transition: transform 0.2s;
+            border-radius: 10px;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,.15);
+        }
+        
+        .footer {
+            margin-top: auto;
+            background-color: var(--dark-color);
+            color: white;
+        }
+        
+        .footer a {
+            color: var(--light-color);
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        /* Badges */
+        .badge {
+            font-weight: 500;
+            border-radius: 10px;
+        }
+        
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        /* Utilitários */
+        .text-small {
+            font-size: 0.875rem;
+        }
+        
+        /* Estilos originais preservados */
+        .table th {
+            font-weight: 600;
+            background-color: #f8f9fa;
+            border-top: none;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(0,0,0,.02);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .progress {
+            height: 1.5rem;
+            border-radius: 0.5rem;
+        }
+        
+        .progress-bar {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.9rem;
+            }
+            
+            h4, h5, h6 {
+                font-size: 1.1rem;
+            }
+            
+            /* Ajustar footer no mobile */
+            .footer {
+                padding-bottom: 70px; /* Espaço para o menu mobile */
+            }
+        }
+        
+        /* Menu dropdown do usuário (desktop) */
+        .user-menu .dropdown-toggle::after {
+            display: none;
+        }
+        
+        .user-menu .dropdown-menu {
+            min-width: 200px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .user-menu .dropdown-item {
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+        
+        .user-menu .dropdown-item:hover {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .user-menu .dropdown-item i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Botões de login/registro desktop */
+        .user-menu .btn-outline-light {
+            border-color: rgba(255,255,255,0.5);
+            color: white;
+        }
+        
+        .user-menu .btn-outline-light:hover {
+            background-color: rgba(255,255,255,0.1);
+            border-color: white;
+        }
+        
+        .user-menu .btn-primary {
+            background-color: #e74c3c;
+            border-color: #e74c3c;
+        }
+        
+        .user-menu .btn-primary:hover {
+            background-color: #c0392b;
+            border-color: #c0392b;
+        }
+        
+        /* Bloco para cabeçalho extra */
+        {% block head %}{% endblock %}
+    </style>
+</head>
+
+<body>
+    <!-- ========== NAVEGAÇÃO SUPERIOR (Desktop/Tablet) ========== -->
+    <nav class="nav-optimized">
+        <div class="container">
+            <div class="main-nav">
+                <!-- Logo/Marca -->
+                <a class="nav-brand" href="{{ url_for('index') }}">
+                    <i class="fas fa-volleyball-ball"></i>
+                    <span>Vôlei Draft</span>
+                </a>
+                
+                <!-- Links Principais (visíveis apenas desktop/tablet) -->
+                <ul class="nav-links">
+                    <li class="nav-link-item">
+                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" 
+                        href="{{ url_for('index') }}">
+                            <i class="fas fa-home"></i>
+                            <span>Início</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-link-item">
+                        <a class="nav-link {% if request.endpoint == 'draft_publico' %}active{% endif %}" 
+                        href="{{ url_for('draft_publico') }}">
+                            <i class="fas fa-tv"></i>
+                            <span>Draft Ao Vivo</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-link-item">
+                        <a class="nav-link {% if request.endpoint == 'ver_times' %}active{% endif %}" 
+                        href="{{ url_for('ver_times') }}">
+                            <i class="fas fa-history"></i>
+                            <span>Histórico</span>
+                        </a>
+                    </li>
+                    
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-link-item">
+                        <a class="nav-link {% if request.endpoint == 'perfil' %}active{% endif %}" 
+                        href="{{ url_for('perfil') }}">
+                            <i class="fas fa-user"></i>
+                            <span>Perfil</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                    <li class="nav-link-item">
+                        <a class="nav-link {% if 'admin_' in request.endpoint %}active{% endif %}" 
+                        href="{{ url_for('admin_dashboard') }}">
+                            <i class="fas fa-cogs"></i>
+                            <span>Admin</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if current_user.is_authenticated and current_user.role == 'capitao' %}
+                    <li class="nav-link-item">
+                        <a class="nav-link {% if 'capitao' in request.endpoint %}active{% endif %}" 
+                        href="{{ url_for('capitao_dashboard') }}">
+                            <i class="fas fa-crown"></i>
+                            <span>Capitão</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <!-- Menu do Usuário (Desktop/Tablet) -->
+                <div class="user-menu">
+                    {% if current_user.is_authenticated %}
+                    <!-- Usuário LOGADO -->
+                    <div class="dropdown">
+                        <button class="btn btn-link text-light p-0 d-flex align-items-center" 
+                                type="button" 
+                                id="userDropdown" 
+                                data-bs-toggle="dropdown" 
+                                aria-expanded="false"
+                                style="text-decoration: none;">
+                            {% if current_user.jogador and current_user.jogador.foto_perfil %}
+                            <!-- COM FOTO DE PERFIL -->
+                            <div class="me-2" title="{{ current_user.username }}">
+                                <img src="{{ current_user.jogador.foto_perfil }}" 
+                                    alt="{{ current_user.username }}" 
+                                    style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.3);">
+                            </div>
+                            {% else %}
+                            <!-- SEM FOTO - MOSTRA INICIAL COM COR DINÂMICA -->
+                            <div class="user-avatar me-2" title="{{ current_user.username }}">
+                                {{ current_user.username[0]|upper }}
+                            </div>
+                            {% endif %}
+                            <span class="d-none d-md-inline me-1">{{ current_user.username }}</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('perfil') }}">
+                                    <i class="fas fa-user me-2"></i> Meu Perfil
+                                </a>
+                            </li>
+                            
+                            {% if current_user.role == 'admin' %}
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">
+                                    <i class="fas fa-cogs me-2"></i> Painel Admin
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% if current_user.role == 'capitao' %}
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('capitao_dashboard') }}">
+                                    <i class="fas fa-crown me-2"></i> Painel Capitão
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <li>
+                                <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2"></i> Sair
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Usuário NÃO LOGADO -->
+                    <div class="d-flex gap-2 align-items-center">
+                        <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-light">
+                            <i class="fas fa-sign-in-alt me-1"></i>
+                            <span class="d-none d-md-inline">Login</span>
+                        </a>
+                        <a href="{{ url_for('register') }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-user-plus me-1"></i>
+                            <span class="d-none d-md-inline">Registrar</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>            
+
+    <!-- ========== MENU MOBILE (Bottom Navigation) ========== -->
+    <nav class="mobile-bottom-nav">
+        <div class="container">
+            <div class="mobile-nav-container">
+                <!-- ITEM 1: Início (SEMPRE) -->
+                <a class="mobile-nav-item {% if request.endpoint == 'index' %}active{% endif %}" 
+                href="{{ url_for('index') }}">
+                    <i class="fas fa-home mobile-nav-icon"></i>
+                    <span class="mobile-nav-text">Início</span>
+                </a>
+                
+                <!-- ITEM 2: Histórico (SEMPRE PARA TODOS) -->
+                <a class="mobile-nav-item {% if request.endpoint == 'ver_times' %}active{% endif %}" 
+                href="{{ url_for('ver_times') }}">
+                    <i class="fas fa-history mobile-nav-icon"></i>
+                    <span class="mobile-nav-text">Histórico</span>
+                </a>
+                
+                {% if current_user.is_authenticated %}
+                    <!-- USUÁRIO LOGADO -->
+                    
+                    {% if current_user.role == 'admin' %}
+                        <!-- USUÁRIO ADMIN LOGADO -->
+                        <!-- ITEM 3: Draft (admin tem acesso ao draft) -->
+                        <a class="mobile-nav-item {% if request.endpoint == 'draft_publico' %}active{% endif %}" 
+                        href="{{ url_for('draft_publico') }}">
+                            <i class="fas fa-tv mobile-nav-icon"></i>
+                            <span class="mobile-nav-text">Draft</span>
+                        </a>
+                        
+                        <!-- ITEM 4: Admin -->
+                        <a class="mobile-nav-item {% if 'admin' in request.endpoint %}active{% endif %}" 
+                        href="{{ url_for('admin_dashboard') }}">
+                            <i class="fas fa-cogs mobile-nav-icon"></i>
+                            <span class="mobile-nav-text">Admin</span>
+                        </a>
+                        
+                    {% elif current_user.role == 'capitao' %}
+                        <!-- CAPITÃO LOGADO -->
+                        <!-- ITEM 3: Capitão -->
+                        <a class="mobile-nav-item {% if request.endpoint == 'capitao_dashboard' %}active{% endif %}" 
+                        href="{{ url_for('capitao_dashboard') }}">
+                            <i class="fas fa-crown mobile-nav-icon"></i>
+                            <span class="mobile-nav-text">Capitão</span>
+                        </a>
+                        
+                        <!-- ITEM 4: Perfil (capitão) com foto ou inicial -->
+                        <a class="mobile-nav-item {% if request.endpoint == 'perfil' %}active{% endif %}" 
+                        href="{{ url_for('perfil') }}">
+                            <div class="mobile-nav-user">
+                                {% if current_user.jogador and current_user.jogador.foto_perfil %}
+                                    <img src="{{ current_user.jogador.foto_perfil }}" 
+                                        alt="{{ current_user.username }}" 
+                                        style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                                {% else %}
+                                    <div class="mobile-user-avatar-text">
+                                        {{ current_user.username[0]|upper }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <span class="mobile-nav-text">Perfil</span>
+                        </a>
+                        
+                    {% else %}
+                        <!-- USUÁRIO COMUM LOGADO -->
+                        <!-- ITEM 3: Draft (usuário comum tem acesso ao draft) -->
+                        <a class="mobile-nav-item {% if request.endpoint == 'draft_publico' %}active{% endif %}" 
+                        href="{{ url_for('draft_publico') }}">
+                            <i class="fas fa-tv mobile-nav-icon"></i>
+                            <span class="mobile-nav-text">Draft</span>
+                        </a>
+                        
+                        <!-- ITEM 4: Perfil (usuário comum) com foto ou inicial -->
+                        <a class="mobile-nav-item {% if request.endpoint == 'perfil' %}active{% endif %}" 
+                        href="{{ url_for('perfil') }}">
+                            <div class="mobile-nav-user">
+                                {% if current_user.jogador and current_user.jogador.foto_perfil %}
+                                    <img src="{{ current_user.jogador.foto_perfil }}" 
+                                        alt="{{ current_user.username }}" 
+                                        style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                                {% else %}
+                                    <div class="mobile-user-avatar-text">
+                                        {{ current_user.username[0]|upper }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <span class="mobile-nav-text">Perfil</span>
+                        </a>
+                    {% endif %}
+                    
+                    <!-- ITEM 5: Sair (TODOS USUÁRIOS LOGADOS) -->
+                    <a class="mobile-nav-item logout-mobile" 
+                    href="{{ url_for('logout') }}"
+                    onclick="return confirm('Tem certeza que deseja sair?')">
+                        <i class="fas fa-sign-out-alt mobile-nav-icon"></i>
+                        <span class="mobile-nav-text">Sair</span>
+                    </a>
+                    
+                {% else %}
+                    <!-- USUÁRIO NÃO LOGADO -->
+                    
+                    <!-- ITEM 3: Draft (não logado tem acesso ao draft) -->
+                    <a class="mobile-nav-item {% if request.endpoint == 'draft_publico' %}active{% endif %}" 
+                    href="{{ url_for('draft_publico') }}">
+                        <i class="fas fa-tv mobile-nav-icon"></i>
+                        <span class="mobile-nav-text">Draft</span>
+                    </a>
+                    
+                    <!-- ITEM 4: Login -->
+                    <a class="mobile-nav-item {% if request.endpoint == 'login' %}active{% endif %}" 
+                    href="{{ url_for('login') }}">
+                        <div class="mobile-nav-login">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </div>
+                        <span class="mobile-nav-text">Login</span>
+                    </a>
+                    
+                    <!-- ITEM 5: Registrar -->
+                    <a class="mobile-nav-item {% if request.endpoint == 'register' %}active{% endif %}" 
+                    href="{{ url_for('register') }}">
+                        <div class="mobile-nav-login" style="background-color: #2ecc71;">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <span class="mobile-nav-text">Registrar</span>
+                    </a>
+                    
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="container py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer 
+    <footer class="footer py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-3 mb-lg-0">
+                    <h5><i class="fas fa-volleyball-ball"></i> Sistema de Vôlei Draft</h5>
+                    <p>Sistema de organização de jogos de vôlei com draft de times.</p>
+                </div>
+                <div class="col-lg-4 mb-3 mb-lg-0">
+                    <h5>Links Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Página Inicial</a></li>
+                        <li><a href="{{ url_for('draft_publico') }}"><i class="fas fa-tv"></i> Draft Ao Vivo</a></li>
+                        {% if current_user.is_authenticated %}
+                        <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Meu Perfil</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <h5>Contato</h5>
+                    <p class="mb-1">Sistema desenvolvido para a comunidade de vôlei</p>
+                    <p class="text-small mb-0">&copy; {{ datetime.now().year }} - Todos os direitos reservados</p>
+                </div>
+            </div>
+        </div>
+    </footer> -->
+
+    <!-- Bootstrap 5 JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- SocketIO -->
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    
+    <!-- Bloco para scripts extra das páginas -->
+    {% block extra_js %}{% endblock %}
+    
+    <script>
+        // Função de confirmação para logout
+        function confirmLogout(event) {
+            if (!confirm('Tem certeza que deseja sair?')) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        // Debug para verificar cliques (pode remover depois)
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Menu mobile carregado');
+            
+            // Verificar links de logout
+            const logoutLinks = document.querySelectorAll('.logout-mobile');
+            logoutLinks.forEach(link => {
+                console.log('Link de logout encontrado:', link.href);
+            });
+        });
+        // Fechar menu dropdown ao clicar fora (desktop)
+        document.addEventListener('click', function(event) {
+            const dropdown = document.querySelector('.user-menu .dropdown');
+            const toggle = document.querySelector('.user-menu .dropdown-toggle');
+            
+            if (dropdown && !dropdown.contains(event.target)) {
+                const dropdownInstance = bootstrap.Dropdown.getInstance(toggle);
+                if (dropdownInstance) {
+                    dropdownInstance.hide();
+                }
+            }
+        });
+        
+        // Destacar link ativo baseado na URL atual
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            
+            // Destacar links na navegação desktop
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+            
+            // Destacar links na navegação mobile
+            document.querySelectorAll('.mobile-nav-item').forEach(item => {
+                if (item.getAttribute('href') === currentPath) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Avatar colorido dinâmico (desktop)
+            const userAvatar = document.querySelector('.user-avatar');
+            if (userAvatar) {
+                const username = userAvatar.title;
+                const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+                
+                let hash = 0;
+                for (let i = 0; i < username.length; i++) {
+                    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const colorIndex = Math.abs(hash) % colors.length;
+                
+                userAvatar.style.backgroundColor = colors[colorIndex];
+                userAvatar.style.color = 'white';
+                userAvatar.style.fontWeight = 'bold';
+            }
+            
+            // Avatar colorido dinâmico (mobile)
+            const mobileUserAvatar = document.querySelector('.mobile-nav-user');
+            if (mobileUserAvatar) {
+                const username = '{{ current_user.username }}';
+                const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+                
+                let hash = 0;
+                for (let i = 0; i < username.length; i++) {
+                    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const colorIndex = Math.abs(hash) % colors.length;
+                
+                mobileUserAvatar.style.backgroundColor = colors[colorIndex];
+            }
+            
+            // Configurar botão de logout mobile
+            const mobileLogoutBtn = document.querySelector('.mobile-logout-btn');
+            if (mobileLogoutBtn) {
+                mobileLogoutBtn.addEventListener('click', function(e) {
+                    if (!confirm('Tem certeza que deseja sair?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        });
+        
+        // Suavizar scroll para âncoras
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId !== '#') {
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
+        
+        // Feedback visual ao clicar nos itens do menu mobile
+        document.querySelectorAll('.mobile-nav-item, .mobile-logout-btn').forEach(item => {
+            item.addEventListener('click', function() {
+                // Adicionar efeito visual temporário
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 200);
+            });
+        });
+        
+        // Fechar mensagens flash automaticamente após 5 segundos
+       // setTimeout(function() {
+       //     const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+       //     alerts.forEach(function(alert) {
+       //         const bsAlert = new bootstrap.Alert(alert);
+       //         bsAlert.close();
+       //     });
+       // }, 50000000);
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

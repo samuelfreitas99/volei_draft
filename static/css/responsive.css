@@ -1,0 +1,187 @@
+/* Responsividade extra para todos os tamanhos */
+
+/* Smartphones pequenos (até 360px) */
+@media (max-width: 360px) {
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .nav-brand span {
+        font-size: 1rem;
+    }
+    
+    .user-menu .btn {
+        padding: 3px 6px;
+        font-size: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.3rem; }
+    h3 { font-size: 1.1rem; }
+    h4 { font-size: 1rem; }
+    h5 { font-size: 0.9rem; }
+}
+
+/* Tablets pequenos (361px - 480px) */
+@media (min-width: 361px) and (max-width: 480px) {
+    .nav-brand span {
+        font-size: 1.1rem;
+    }
+    
+    .nav-link {
+        padding: 6px 10px !important;
+        font-size: 0.8rem;
+    }
+    
+    .quick-nav-card {
+        padding: 1.5rem !important;
+    }
+    
+    .nav-icon {
+        font-size: 1.8rem;
+    }
+}
+
+/* Tablets (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .main-nav {
+        padding: 0.3rem 0;
+    }
+    
+    .nav-links {
+        gap: 2px;
+    }
+    
+    .nav-link {
+        padding: 7px 12px !important;
+        font-size: 0.85rem;
+    }
+    
+    .quick-access {
+        margin-left: 5px;
+    }
+}
+
+/* Desktops pequenos (769px - 992px) */
+@media (min-width: 769px) and (max-width: 992px) {
+    .nav-links {
+        justify-content: flex-start;
+    }
+    
+    .nav-link {
+        padding: 8px 12px !important;
+    }
+    
+    .quick-access {
+        margin-left: 5px;
+    }
+}
+
+/* Desktops médios (993px - 1200px) */
+@media (min-width: 993px) and (max-width: 1200px) {
+    .container {
+        max-width: 100%;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}
+
+/* Desktops grandes (acima de 1200px) */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1140px;
+    }
+}
+
+/* Ajustes para orientação paisagem */
+@media (max-height: 500px) and (orientation: landscape) {
+    .main-nav {
+        padding: 0.2rem 0;
+    }
+    
+    .nav-link {
+        padding: 5px 10px !important;
+    }
+    
+    .quick-nav-card {
+        padding: 1rem !important;
+    }
+    
+    .nav-icon {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+    }
+}
+
+/* Impressão */
+@media print {
+    .nav-optimized, .footer, .mobile-menu-btn, .btn {
+        display: none !important;
+    }
+    
+    .container {
+        max-width: 100%;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .nav-link {
+        font-weight: 500;
+    }
+    
+    .card {
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+}
+
+/* Modo escuro (se suportado) */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #121212;
+        color: #e0e0e0;
+    }
+    
+    .card {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+    }
+    
+    .table {
+        color: #e0e0e0;
+    }
+    
+    .table-light {
+        background-color: #2d2d2d;
+    }
+}
+
+/* Touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .nav-link {
+        padding: 12px 15px !important; /* Maior área de toque */
+    }
+    
+    .btn {
+        padding: 10px 15px;
+    }
+    
+    /* Remove hover effects para touch */
+    .nav-link:hover {
+        transform: none;
+    }
+    
+    .card:hover {
+        transform: none;
+    }
+}

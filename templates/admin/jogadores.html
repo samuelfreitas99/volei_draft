@@ -1,0 +1,448 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Gerenciar Jogadores{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="fas fa-users"></i> Gerenciar Jogadores</h4>
+    <a href="{{ url_for('novo_jogador') }}" class="btn btn-success">
+        <i class="fas fa-user-plus"></i> Novo Jogador
+    </a>
+</div>
+
+<!-- Mensalistas Ativos -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-star"></i> Mensalistas Ativos
+            <span class="badge bg-light text-dark float-end">{{ mensalistas_ativos|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <!-- Para Desktop (mantém a tabela) -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Posição</th>
+                        <th>Status Mensalidade</th>
+                        <th>Período</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jogador in mensalistas_ativos %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if jogador.foto_perfil %}
+                                <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}"
+                                    class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ jogador.nome }}</strong>
+                                    {% if jogador.apelido %}
+                                    <br><small class="text-muted">"{{ jogador.apelido }}"</small>
+                                    {% endif %}
+                                    {% if jogador.capitao %}
+                                    <span class="badge bg-warning ms-1">Capitão</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ jogador.telefone or '-' }}</td>
+                        <td>
+                            {% if jogador.posicao %}
+                            <span class="badge bg-info">{{ get_posicao_display(jogador.posicao) }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if jogador.mensalidade_paga %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle"></i> Paga
+                            </span>
+                            {% else %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-exclamation-circle"></i> Pendente
+                            </span>
+                            {% endif %}
+                            {% if jogador.data_fim_mensalidade and jogador.data_fim_mensalidade < date.today() %} <br>
+                                <span class="badge bg-danger">Vencida</span>
+                                {% endif %}
+                        </td>
+                        <td>
+                            {% if jogador.data_inicio_mensalidade and jogador.data_fim_mensalidade %}
+                            {{ format_date(jogador.data_inicio_mensalidade) }} a {{
+                            format_date(jogador.data_fim_mensalidade) }}
+                            {% elif jogador.data_inicio_mensalidade %}
+                            Desde {{ format_date(jogador.data_inicio_mensalidade) }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('gerenciar_mensalidade', id=jogador.id) }}"
+                                    class="btn btn-outline-primary" title="Gerenciar Mensalidade">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </a>
+                                <a href="{{ url_for('editar_jogador', id=jogador.id) }}" class="btn btn-outline-warning"
+                                    title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if jogador.data_fim_mensalidade and jogador.data_fim_mensalidade < date.today() %} <a
+                                    href="{{ url_for('renovar_mensalidade', id=jogador.id) }}"
+                                    class="btn btn-outline-success" title="Renovar Mensalidade">
+                                    <i class="fas fa-sync-alt"></i>
+                                    </a>
+                                    {% endif %}
+
+                                    <!-- Botão para inativar -->
+                                    <a href="{{ url_for('inativar_jogador', id=jogador.id) }}"
+                                        class="btn btn-outline-secondary"
+                                        onclick="return confirm('Tem certeza que deseja inativar {{ jogador.nome }}?\\n\\nO jogador ficará inativo mas o cadastro será mantido.')"
+                                        title="Inativar">
+                                        <i class="fas fa-user-slash"></i>
+                                    </a>
+
+                                    <!-- Botão para excluir permanentemente -->
+                                    <a href="{{ url_for('excluir_jogador', id=jogador.id) }}"
+                                        class="btn btn-outline-danger"
+                                        onclick="return confirm('⚠️ ATENÇÃO!\\n\\nTem certeza que deseja EXCLUIR PERMANENTEMENTE {{ jogador.nome }}?\\n\\nEsta ação não pode ser desfeita!\\nTodas as confirmações, histórico e dados serão removidos.')"
+                                        title="Excluir Permanentemente">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Para Mobile (cards) -->
+        <div class="d-block d-md-none">
+            {% for jogador in mensalistas_ativos %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <!-- Cabeçalho com foto e nome -->
+                    <div class="d-flex align-items-start mb-3">
+                        {% if jogador.foto_perfil %}
+                        <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" class="rounded-circle me-3"
+                            style="width: 60px; height: 60px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle me-3 bg-secondary d-flex align-items-center justify-content-center"
+                            style="width: 60px; height: 60px;">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ jogador.nome }}</h6>
+                            {% if jogador.apelido %}
+                            <small class="text-muted d-block">"{{ jogador.apelido }}"</small>
+                            {% endif %}
+                            {% if jogador.capitao %}
+                            <span class="badge bg-warning">Capitão</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Informações em grid -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Telefone</small>
+                            <span>{{ jogador.telefone or '-' }}</span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Posição</small>
+                            {% if jogador.posicao %}
+                            <span class="badge bg-info">{{ get_posicao_display(jogador.posicao) }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Status</small>
+                            {% if jogador.mensalidade_paga %}
+                            <span class="badge bg-success">Paga</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pendente</span>
+                            {% endif %}
+                            {% if jogador.data_fim_mensalidade and jogador.data_fim_mensalidade < date.today() %} <br>
+                                <span class="badge bg-danger mt-1">Vencida</span>
+                                {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Período</small>
+                            {% if jogador.data_inicio_mensalidade and jogador.data_fim_mensalidade %}
+                            <small>{{ format_date(jogador.data_inicio_mensalidade) }}<br>a {{
+                                format_date(jogador.data_fim_mensalidade) }}</small>
+                            {% elif jogador.data_inicio_mensalidade %}
+                            <small>Desde {{ format_date(jogador.data_inicio_mensalidade) }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Botões de ação -->
+                    <div class="btn-group w-100" role="group">
+                        <a href="{{ url_for('gerenciar_mensalidade', id=jogador.id) }}"
+                            class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </a>
+                        <a href="{{ url_for('editar_jogador', id=jogador.id) }}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        {% if jogador.data_fim_mensalidade and jogador.data_fim_mensalidade < date.today() %} <a
+                            href="{{ url_for('renovar_mensalidade', id=jogador.id) }}"
+                            class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-sync-alt"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('inativar_jogador', id=jogador.id) }}"
+                                class="btn btn-outline-secondary btn-sm"
+                                onclick="return confirm('Inativar {{ jogador.nome }}?')">
+                                <i class="fas fa-user-slash"></i>
+                            </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Não Mensalistas -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-user"></i> Jogadores Não Mensalistas
+            <span class="badge bg-light text-dark float-end">{{ nao_mensalistas|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Posição</th>
+                        <th>Nível</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jogador in nao_mensalistas %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if jogador.foto_perfil %}
+                                <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}"
+                                    class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ jogador.nome }}</strong>
+                                    {% if jogador.apelido %}
+                                    <br><small class="text-muted">"{{ jogador.apelido }}"</small>
+                                    {% endif %}
+                                    {% if jogador.capitao %}
+                                    <span class="badge bg-warning ms-1">Capitão</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ jogador.telefone or '-' }}</td>
+                        <td>
+                            {% if jogador.posicao %}
+                            <span class="badge bg-info">{{ get_posicao_display(jogador.posicao) }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span
+                                class="badge {% if jogador.nivel == 'iniciante' %}bg-info{% elif jogador.nivel == 'intermediario' %}bg-primary{% else %}bg-warning{% endif %}">
+                                {{ get_nivel_display(jogador.nivel) }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('gerenciar_mensalidade', id=jogador.id) }}"
+                                    class="btn btn-outline-primary" title="Tornar Mensalista">
+                                    <i class="fas fa-star"></i>
+                                </a>
+                                <a href="{{ url_for('editar_jogador', id=jogador.id) }}" class="btn btn-outline-warning"
+                                    title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <!-- Botão para inativar não mensalista -->
+                                <a href="{{ url_for('inativar_jogador', id=jogador.id) }}"
+                                    class="btn btn-outline-secondary"
+                                    onclick="return confirm('Inativar {{ jogador.nome }}?\\n\\nO jogador ficará inativo mas o cadastro será mantido.')"
+                                    title="Inativar">
+                                    <i class="fas fa-user-slash"></i>
+                                </a>
+                                <!-- Botão para excluir não mensalista -->
+                                <a href="{{ url_for('remover_nao_mensalista', id=jogador.id) }}"
+                                    class="btn btn-outline-danger"
+                                    onclick="return confirm('EXCLUIR PERMANENTEMENTE {{ jogador.nome }}?\\n\\nEsta ação não pode ser desfeita!\\nTodas as confirmações e histórico serão removidos.')"
+                                    title="Excluir Permanentemente">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Jogadores Inativos -->
+{% if inativos %}
+<div class="card">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-user-slash"></i> Jogadores Inativos
+            <span class="badge bg-light text-dark float-end">{{ inativos|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Posição</th>
+                        <th>Nível</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jogador in inativos %}
+                    <tr class="table-secondary">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if jogador.foto_perfil %}
+                                <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}"
+                                    class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ jogador.nome }}</strong>
+                                    {% if jogador.apelido %}
+                                    <br><small class="text-muted">"{{ jogador.apelido }}"</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ jogador.telefone or '-' }}</td>
+                        <td>
+                            {% if jogador.posicao %}
+                            <span class="badge bg-info">{{ get_posicao_display(jogador.posicao) }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span
+                                class="badge {% if jogador.nivel == 'iniciante' %}bg-info{% elif jogador.nivel == 'intermediario' %}bg-primary{% else %}bg-warning{% endif %}">
+                                {{ get_nivel_display(jogador.nivel) }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if jogador.mensalista %}
+                            <span class="badge bg-warning">Mensalista Inativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Não Mensalista</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <!-- Botão para reativar -->
+                                <button type="button" class="btn btn-outline-success"
+                                    onclick="reativarJogador({{ jogador.id }}, '{{ jogador.nome }}')"
+                                    title="Reativar Jogador">
+                                    <i class="fas fa-user-check"></i>
+                                </button>
+                                <!-- Botão para excluir permanentemente -->
+                                <a href="{{ url_for('excluir_jogador', id=jogador.id) }}" class="btn btn-outline-danger"
+                                    onclick="return confirm('EXCLUIR PERMANENTEMENTE {{ jogador.nome }}?\\n\\nEsta ação não pode ser desfeita!\\nTodas as confirmações e histórico serão removidos.')"
+                                    title="Excluir Permanentemente">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    function reativarJogador(id, nome) {
+        if (confirm(`Deseja reativar o jogador ${nome}?`)) {
+            fetch('/admin/jogador/reativar/' + id)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Erro: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao reativar jogador.');
+                });
+        }
+    }
+
+    function reativarJogador(id, nome) {
+        if (confirm(`Deseja reativar o jogador ${nome}?`)) {
+            fetch('/admin/jogador/reativar/' + id)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Erro: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao reativar jogador.');
+                });
+        }
+    }   
+</script>
+{% endblock %}

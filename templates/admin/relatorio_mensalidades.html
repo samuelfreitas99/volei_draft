@@ -1,0 +1,718 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Gerenciar Recados/Mural{% endblock %}
+
+{% block admin_content %}
+    
+    <title>Relatório de Mensalidades - Vôlei Draft</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    
+    <style>
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .badge-pago {
+            background-color: #28a745;
+        }
+        .badge-pendente {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .badge-vencido {
+            background-color: #dc3545;
+        }
+        .badge-ativo {
+            background-color: #17a2b8;
+        }
+        .summary-card {
+            border-radius: 10px;
+            transition: transform 0.2s;
+            height: 100%;
+        }
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-pago {
+            background-color: #28a745;
+        }
+        .status-pendente {
+            background-color: #ffc107;
+        }
+        .status-vencido {
+            background-color: #dc3545;
+        }
+        .status-ativo {
+            background-color: #17a2b8;
+        }
+        .filter-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+        .valor-total {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+        .export-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+        }
+        .export-btn:hover {
+            background: linear-gradient(135deg, #218838 0%, #17a2b8 100%);
+            color: white;
+        }
+        .filtro-ativo {
+            background-color: #e7f1ff !important;
+            border-color: #667eea !important;
+        }
+    </style>
+</head>
+<body>
+
+
+    <!-- Conteúdo Principal -->
+    <div class="container-fluid mt-4">
+        <!-- Cabeçalho -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-file-invoice-dollar me-2"></i>Relatório Detalhado de Mensalidades
+                        </h4>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('admin_mensalidades') }}" class="btn btn-light">
+                                <i class="fas fa-arrow-left me-1"></i> Voltar
+                            </a>
+                            <button type="button" class="btn btn-success" onclick="exportarRelatorio()">
+                                <i class="fas fa-file-export me-1"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0 text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Relatório completo de todas as mensalidades com filtros e estatísticas.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow filter-card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-filter me-2"></i>Filtros
+                        </h5>
+                        
+                        <form method="GET" action="{{ url_for('relatorio_mensalidades') }}" class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Status:</label>
+                                <select name="status" class="form-select" onchange="this.form.submit()">
+                                    <option value="todos" {% if status_filter == 'todos' %}selected{% endif %}>
+                                        Todos os Status
+                                    </option>
+                                    <option value="pagos" {% if status_filter == 'pagos' %}selected{% endif %}>
+                                        Pagos
+                                    </option>
+                                    <option value="pendentes" {% if status_filter == 'pendentes' %}selected{% endif %}>
+                                        Pendentes
+                                    </option>
+                                    <option value="vencidos" {% if status_filter == 'vencidos' %}selected{% endif %}>
+                                        Vencidos
+                                    </option>
+                                    <option value="ativos" {% if status_filter == 'ativos' %}selected{% endif %}>
+                                        Ativos (Pagos e Não Vencidos)
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label">Mês:</label>
+                                <select name="mes" class="form-select" onchange="this.form.submit()">
+                                    <option value="">Todos os meses</option>
+                                    {% for mes_num in range(1, 13) %}
+                                    <option value="{{ mes_num }}" {% if mes|string == mes_num|string %}selected{% endif %}>
+                                        {{ mes_num }} - {{ ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][mes_num-1] }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label">Ano:</label>
+                                <select name="ano" class="form-select" onchange="this.form.submit()">
+                                    {% for ano_num in range(hoje.year, hoje.year-5, -1) %}
+                                    <option value="{{ ano_num }}" {% if ano|string == ano_num|string %}selected{% endif %}>
+                                        {{ ano_num }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-1"></i> Aplicar Filtros
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards de Resumo -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card summary-card shadow h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Total de Mensalistas</h6>
+                                <h3 class="mb-0">{{ total }}</h3>
+                            </div>
+                            <div class="bg-primary rounded-circle p-3">
+                                <i class="fas fa-users fa-2x text-white"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Todos os mensalistas cadastrados
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card summary-card shadow h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Mensalidades Pagas</h6>
+                                <h3 class="mb-0">{{ pagos }}</h3>
+                            </div>
+                            <div class="bg-success rounded-circle p-3">
+                                <i class="fas fa-check-circle fa-2x text-white"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <span class="badge bg-success">{{ ((pagos/total)*100)|round(1) if total > 0 else 0 }}%</span>
+                            <small class="text-muted ms-2">Taxa de pagamento</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card summary-card shadow h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Ativos (Não Vencidos)</h6>
+                                <h3 class="mb-0">{{ ativos }}</h3>
+                            </div>
+                            <div class="bg-info rounded-circle p-3">
+                                <i class="fas fa-shield-alt fa-2x text-white"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <span class="badge bg-info">{{ ((ativos/total)*100)|round(1) if total > 0 else 0 }}%</span>
+                            <small class="text-muted ms-2">Dos mensalistas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card summary-card shadow h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Vencidas</h6>
+                                <h3 class="mb-0">{{ vencidos }}</h3>
+                            </div>
+                            <div class="bg-warning rounded-circle p-3">
+                                <i class="fas fa-exclamation-triangle fa-2x text-white"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <span class="badge bg-warning">{{ ((vencidos/total)*100)|round(1) if total > 0 else 0 }}%</span>
+                            <small class="text-muted ms-2">Precisam de atenção</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumo Financeiro -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Resumo Financeiro
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-3">
+                                <div class="p-3 border rounded">
+                                    <h6 class="text-muted">Valor por Mensalidade</h6>
+                                    <h4 class="valor-total">R$ {{ "%.2f"|format(valor_mensalidade) }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="p-3 border rounded">
+                                    <h6 class="text-muted">Valor Total Esperado</h6>
+                                    <h4 class="text-primary">R$ {{ "%.2f"|format(valor_total) }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="p-3 border rounded">
+                                    <h6 class="text-muted">Valor Recebido</h6>
+                                    <h4 class="text-success">R$ {{ "%.2f"|format(valor_recebido) }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="p-3 border rounded">
+                                    <h6 class="text-muted">Valor Pendente</h6>
+                                    <h4 class="text-danger">R$ {{ "%.2f"|format(valor_pendente) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progresso -->
+                        <div class="mt-4">
+                            <h6>Progresso de Arrecadação</h6>
+                            <div class="progress" style="height: 30px;">
+                                {% set percentual = (valor_recebido/valor_total*100) if valor_total > 0 else 0 %}
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ percentual|round(1) }}%">
+                                    {{ percentual|round(1) }}% Recebido
+                                </div>
+                                <div class="progress-bar bg-warning" role="progressbar" 
+                                     style="width: {{ ((valor_pendente/valor_total*100) if valor_total > 0 else 0)|round(1) }}%">
+                                    {{ ((valor_pendente/valor_total*100) if valor_total > 0 else 0)|round(1) }}% Pendente
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Mensalistas -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Detalhamento por Jogador
+                            <small class="text-muted ms-2">({{ jogadores|length }} registros)</small>
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="imprimirTabela()">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="exportarCSV()">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped" id="tabelaMensalidades">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Jogador</th>
+                                        <th>Mensalista</th>
+                                        <th>Pagamento</th>
+                                        <th>Período</th>
+                                        <th>Dias Restantes</th>
+                                        <th>Status</th>
+                                        <th>Valor</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for jogador in jogadores %}
+                                    {% set dias_restantes = (jogador.data_fim_mensalidade - hoje).days if jogador.data_fim_mensalidade else None %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% if jogador.foto_perfil %}
+                                                <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                                                     class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                                                {% else %}
+                                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" 
+                                                     style="width: 40px; height: 40px;">
+                                                    {{ jogador.nome[0]|upper }}
+                                                </div>
+                                                {% endif %}
+                                                <div>
+                                                    <strong>{{ jogador.nome }}</strong>
+                                                    {% if jogador.apelido %}
+                                                    <br>
+                                                    <small class="text-muted">"{{ jogador.apelido }}"</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if jogador.mensalista %}
+                                            <span class="badge bg-primary">SIM</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">NÃO</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if jogador.mensalidade_paga %}
+                                            <span class="badge bg-success">PAGA</span>
+                                            {% else %}
+                                            <span class="badge bg-warning">PENDENTE</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if jogador.data_inicio_mensalidade and jogador.data_fim_mensalidade %}
+                                            {{ jogador.data_inicio_mensalidade|format_date }} a {{ jogador.data_fim_mensalidade|format_date }}
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ ((jogador.data_fim_mensalidade - jogador.data_inicio_mensalidade).days + 1) }} dias
+                                            </small>
+                                            {% else %}
+                                            <span class="text-muted">Não definido</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if jogador.data_fim_mensalidade %}
+                                                {% if dias_restantes > 0 %}
+                                                <span class="badge bg-success">{{ dias_restantes }} dias</span>
+                                                {% elif dias_restantes == 0 %}
+                                                <span class="badge bg-warning">Hoje</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">{{ -dias_restantes }} dias atrás</span>
+                                                {% endif %}
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if jogador.mensalista %}
+                                                {% if jogador.mensalidade_paga %}
+                                                    {% if jogador.data_fim_mensalidade and jogador.data_fim_mensalidade >= hoje %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check-circle me-1"></i>Ativa
+                                                    </span>
+                                                    {% else %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-exclamation-circle me-1"></i>Vencida
+                                                    </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% if jogador.data_fim_mensalidade and jogador.data_fim_mensalidade >= hoje %}
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-clock me-1"></i>Pendente
+                                                    </span>
+                                                    {% else %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>Vencida Pendente
+                                                    </span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% else %}
+                                            <span class="badge bg-secondary">Não Mensalista</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>R$ {{ "%.2f"|format(valor_mensalidade) }}</strong>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{{ url_for('gerenciar_mensalidade', id=jogador.id) }}" 
+                                                   class="btn btn-outline-primary" title="Gerenciar">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{{ url_for('editar_jogador', id=jogador.id) }}" 
+                                                   class="btn btn-outline-info" title="Editar Jogador">
+                                                    <i class="fas fa-user-edit"></i>
+                                                </a>
+                                                {% if jogador.user %}
+                                                <a href="{{ url_for('mudar_senha_jogador', id=jogador.id) }}" 
+                                                   class="btn btn-outline-warning" title="Mudar Senha">
+                                                    <i class="fas fa-key"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="9" class="text-center py-4">
+                                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted">Nenhuma mensalidade encontrada</h5>
+                                            <p class="text-muted">Não há mensalistas que correspondam aos filtros aplicados.</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>
+                            <i class="fas fa-clock me-1"></i>
+                            Atualizado em: {{ hoje|format_date('%d/%m/%Y %H:%M') }}
+                            | Valor da mensalidade: R$ {{ "%.2f"|format(valor_mensalidade) }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legenda -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-info-circle me-2"></i>Legenda dos Status
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <span class="status-indicator status-pago"></span>
+                                <span class="badge bg-success">Ativa</span>
+                                <small class="text-muted">- Mensalidade paga e dentro do prazo</small>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <span class="status-indicator status-pendente"></span>
+                                <span class="badge bg-warning">Pendente</span>
+                                <small class="text-muted">- Mensalidade não paga, mas dentro do prazo</small>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <span class="status-indicator status-vencido"></span>
+                                <span class="badge bg-danger">Vencida</span>
+                                <small class="text-muted">- Período encerrado, independente do pagamento</small>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <span class="status-indicator"></span>
+                                <span class="badge bg-danger">Vencida Pendente</span>
+                                <small class="text-muted">- Vencida e sem pagamento</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white mt-5 py-3">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">
+                        <i class="fas fa-volleyball-ball"></i> Vôlei Draft &copy; {{ hoje.year }}
+                    </p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p class="mb-0">
+                        <i class="fas fa-user-shield me-1"></i>Área Administrativa
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery e DataTables -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        // Inicializar DataTable
+        $(document).ready(function() {
+            $('#tabelaMensalidades').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json"
+                },
+                "pageLength": 25,
+                "order": [[1, 'asc']],
+                "columnDefs": [
+                    { "orderable": false, "targets": [8] } // Desabilitar ordenação na coluna de ações
+                ]
+            });
+            
+            // Adicionar classe ativa aos botões de filtro
+            const statusFilter = "{{ status_filter }}";
+            if (statusFilter) {
+                $(`select[name="status"]`).addClass('filtro-ativo');
+            }
+        });
+        
+        // Funções de exportação
+        function exportarRelatorio() {
+            const status = "{{ status_filter }}";
+            const mes = "{{ mes }}";
+            const ano = "{{ ano }}";
+            
+            let url = `/admin/relatorio_mensalidades/exportar?status=${status}`;
+            if (mes) url += `&mes=${mes}`;
+            if (ano) url += `&ano=${ano}`;
+            
+            window.open(url, '_blank');
+        }
+        
+        function exportarCSV() {
+            // Implementação simplificada - você pode melhorar isso
+            let csv = [];
+            
+            // Cabeçalho
+            csv.push(['Relatório de Mensalidades', `Status: {{ status_filter }}`, `Mês: {{ mes }}`, `Ano: {{ ano }}`]);
+            csv.push(['Data de geração:', '{{ hoje|format_date("%d/%m/%Y %H:%M") }}']);
+            csv.push([]);
+            csv.push(['Nome', 'Mensalista', 'Pagamento', 'Período Início', 'Período Fim', 'Dias Restantes', 'Status', 'Valor (R$)']);
+            
+            // Dados
+            {% for jogador in jogadores %}
+            {% set dias_restantes = (jogador.data_fim_mensalidade - hoje).days if jogador.data_fim_mensalidade else '' %}
+            csv.push([
+                '{{ jogador.nome }}',
+                '{{ "SIM" if jogador.mensalista else "NÃO" }}',
+                '{{ "PAGA" if jogador.mensalidade_paga else "PENDENTE" }}',
+                '{{ jogador.data_inicio_mensalidade|format_date if jogador.data_inicio_mensalidade else "" }}',
+                '{{ jogador.data_fim_mensalidade|format_date if jogador.data_fim_mensalidade else "" }}',
+                '{{ dias_restantes if dias_restantes is not none else "" }}',
+                '{{ "Ativa" if jogador.mensalista and jogador.mensalidade_paga and jogador.data_fim_mensalidade and jogador.data_fim_mensalidade >= hoje else ("Pendente" if jogador.mensalista and not jogador.mensalidade_paga and jogador.data_fim_mensalidade and jogador.data_fim_mensalidade >= hoje else ("Vencida" if jogador.mensalista and jogador.data_fim_mensalidade and jogador.data_fim_mensalidade < hoje else "Não Mensalista")) }}',
+                '{{ "%.2f"|format(valor_mensalidade) }}'
+            ]);
+            {% endfor %}
+            
+            // Totais
+            csv.push([]);
+            csv.push(['TOTAL MENSALISTAS', '{{ total }}', '', '', '', '', '']);
+            csv.push(['MENSALIDADES PAGAS', '{{ pagos }}', '', '', '', '', '']);
+            csv.push(['ATIVAS (NÃO VENCIDAS)', '{{ ativos }}', '', '', '', '', '']);
+            csv.push(['VENCIDAS', '{{ vencidos }}', '', '', '', '', '']);
+            csv.push(['VALOR TOTAL ESPERADO', '', '', '', '', '', '', 'R$ {{ "%.2f"|format(valor_total) }}']);
+            csv.push(['VALOR RECEBIDO', '', '', '', '', '', '', 'R$ {{ "%.2f"|format(valor_recebido) }}']);
+            csv.push(['VALOR PENDENTE', '', '', '', '', '', '', 'R$ {{ "%.2f"|format(valor_pendente) }}']);
+            
+            // Converter para CSV
+            const csvContent = csv.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            
+            // Baixar
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `relatorio_mensalidades_{{ hoje|format_date("%Y%m%d") }}.csv`;
+            link.click();
+        }
+        
+        function imprimirTabela() {
+            const printContent = document.querySelector('.card:has(.table-responsive)').outerHTML;
+            const originalContent = document.body.innerHTML;
+            
+            document.body.innerHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Relatório de Mensalidades - {{ hoje|format_date("%d/%m/%Y") }}</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+                    <style>
+                        @media print {
+                            .btn { display: none !important; }
+                            .badge { color: white !important; }
+                            .table { font-size: 12px; }
+                        }
+                        .table th { background-color: #f8f9fa !important; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container mt-4">
+                        <h4 class="mb-4">
+                            <i class="fas fa-file-invoice-dollar me-2"></i>
+                            Relatório de Mensalidades - {{ hoje|format_date("%d/%m/%Y") }}
+                        </h4>
+                        <div class="mb-4">
+                            <p class="mb-1">
+                                <strong>Filtros aplicados:</strong>
+                                Status: {{ status_filter|upper if status_filter != 'todos' else 'TODOS' }}
+                                {% if mes %} | Mês: {{ mes }} {% endif %}
+                                {% if ano %} | Ano: {{ ano }} {% endif %}
+                            </p>
+                            <p class="mb-0">
+                                <strong>Total:</strong> {{ jogadores|length }} mensalista(s)
+                            </p>
+                        </div>
+                        ${printContent}
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            window.print();
+            document.body.innerHTML = originalContent;
+            window.location.reload(); // Para restaurar os eventos JavaScript
+        }
+        
+        // Alertas com boostrap
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    $(document).ready(function() {
+                        showAlert('{{ category }}', '{{ message }}');
+                    });
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        function showAlert(type, message) {
+            const alertClass = type === 'danger' ? 'alert-danger' : 
+                              type === 'warning' ? 'alert-warning' : 
+                              type === 'info' ? 'alert-info' : 'alert-success';
+            
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show position-fixed top-0 end-0 m-3" 
+                     style="z-index: 9999; max-width: 400px;" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            $('body').append(alertHtml);
+            
+            // Remover automaticamente após 5 segundos
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+    </script>
+{% endblock %}

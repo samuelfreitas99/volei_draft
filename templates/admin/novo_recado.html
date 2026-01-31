@@ -1,0 +1,91 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Novo Recado{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bullhorn"></i> Novo Recado
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('novo_recado') }}">
+                    <div class="mb-3">
+                        <label for="titulo" class="form-label">Título *</label>
+                        <input type="text" class="form-control" id="titulo" name="titulo" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="conteudo" class="form-label">Conteúdo *</label>
+                        <textarea class="form-control" id="conteudo" name="conteudo" rows="5" required></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="autor" class="form-label">Autor</label>
+                            <input type="text" class="form-control" id="autor" name="autor" 
+                                   value="{{ current_user.username if current_user.is_authenticated else 'Admin' }}">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="data_expiracao" class="form-label">Data de Expiração</label>
+                            <input type="date" class="form-control" id="data_expiracao" name="data_expiracao">
+                            <div class="form-text">Deixe em branco para não expirar</div>
+                        </div>
+                    </div>
+
+                    <!-- NOVO CAMPO: Vincular à Semana -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="semana_id" class="form-label">Vincular à Semana</label>
+                            <select class="form-select" id="semana_id" name="semana_id">
+                                <option value="" selected>Todas as semanas</option>
+                                {% for semana in semanas_futuras %}
+                                <option value="{{ semana.id }}">
+                                    {{ semana.data.strftime('%d/%m/%Y') }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Deixe em branco para mostrar em todas as semanas</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label d-block">&nbsp;</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="importante" name="importante">
+                                <label class="form-check-label" for="importante">
+                                    <i class="fas fa-exclamation-triangle text-danger"></i> Marcar como IMPORTANTE
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_recados') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Publicar Recado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <h6><i class="fas fa-info-circle"></i> Informações:</h6>
+            <ul class="mb-0">
+                <li>Recados marcados como IMPORTANTE aparecem em destaque</li>
+                <li>Recados expiram automaticamente na data especificada</li>
+                <li>Recados aparecem na página inicial para todos os usuários</li>
+                <li>Selecione uma semana específica ou deixe para todas as semanas</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

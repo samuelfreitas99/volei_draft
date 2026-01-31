@@ -1,0 +1,118 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Configurar Semana{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog"></i> Configurar Semana - {{ format_date(semana.data) }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('configurar_semana', id=semana.id) }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="max_times" class="form-label">Número de Times *</label>
+                            <select class="form-select" id="max_times" name="max_times" required>
+                                {% for i in range(2, 7) %}
+                                <option value="{{ i }}" {% if semana.max_times == i %}selected{% endif %}>
+                                    {{ i }} Times
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Define quantos times serão formados no draft
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="max_jogadores_por_time" class="form-label">Jogadores por Time *</label>
+                            <select class="form-select" id="max_jogadores_por_time" name="max_jogadores_por_time" required>
+                                {% for i in range(4, 11) %}
+                                <option value="{{ i }}" {% if semana.max_jogadores_por_time == i %}selected{% endif %}>
+                                    {{ i }} jogadores
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Define o tamanho máximo de cada time
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tempo_escolha" class="form-label">Tempo por Escolha</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="tempo_escolha" 
+                                    name="tempo_escolha" value="0" 
+                                    min="0" max="300" step="5" readonly style="background-color: #f8f9fa;">
+                                <span class="input-group-text">Sem tempo</span>
+                            </div>
+                            <div class="form-text">
+                                <strong>0 segundos:</strong> Sem limite de tempo (configuração fixa)
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="modo_draft" class="form-label">Modo do Draft *</label>
+                            <select class="form-select" id="modo_draft" name="modo_draft" required>
+                                <option value="snake" {% if semana.modo_draft == 'snake' %}selected{% endif %}>Snake Draft</option>
+                                <option value="linear" {% if semana.modo_draft == 'linear' %}selected{% endif %}>Linear Draft</option>
+                            </select>
+                            <div class="form-text">
+                                <strong>Snake:</strong> Alterna ordem a cada rodada<br>
+                                <strong>Linear:</strong> Mantém a mesma ordem
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="descricao" class="form-label">Descrição da Semana</label>
+                            <textarea class="form-control" id="descricao" name="descricao" 
+                                      rows="2">{{ semana.descricao }}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-calculator"></i> Cálculo Automático:</h6>
+                        <p class="mb-1">Total de vagas: <strong id="totalVagas">12</strong></p>
+                        <p class="mb-1">Jogadores confirmados: <strong>{{ confirmados }}</strong></p>
+                        <p class="mb-0">Capitães necessários: <strong id="capitaesNecessarios">2</strong></p>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Configurações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    function calcularTotais() {
+        const maxTimes = parseInt($('#max_times').val()) || 2;
+        const maxJogadores = parseInt($('#max_jogadores_por_time').val()) || 6;
+        
+        $('#totalVagas').text(maxTimes * maxJogadores);
+        $('#capitaesNecessarios').text(maxTimes);
+    }
+    
+    $('#max_times, #max_jogadores_por_time').change(calcularTotais);
+    calcularTotais();
+});
+</script>
+{% endblock %}

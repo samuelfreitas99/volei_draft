@@ -1,0 +1,247 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Definir Ciclo de Mensalidade{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-plus"></i> Definir Novo Ciclo de Mensalidade
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('definir_ciclo_mensalidade') }}" id="cicloForm">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="data_inicio" class="form-label">Data de Início *</label>
+                            <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
+                                   value="{{ data_inicio_sugerida.strftime('%Y-%m-%d') }}" required>
+                            <div class="form-text">
+                                Primeiro dia do ciclo (normalmente uma segunda-feira)
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="data_fim" class="form-label">Data de Fim *</label>
+                            <input type="date" class="form-control" id="data_fim" name="data_fim" 
+                                   value="{{ data_fim_sugerida.strftime('%Y-%m-%d') }}" required>
+                            <div class="form-text">
+                                Último dia do ciclo
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-calculator"></i> Detalhes do Ciclo:</h6>
+                        <p class="mb-1">Duração: <strong id="duracaoCiclo">30</strong> dias</p>
+                        <p class="mb-1">Dias de jogo no ciclo: <strong id="diasJogo">4</strong> quintas-feiras</p>
+                        <p class="mb-0">Próximo jogo após ciclo: <strong id="proximoJogo">--/--/----</strong></p>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Aplicar a:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="acao" id="acaoTodos" value="todos" checked>
+                            <label class="form-check-label" for="acaoTodos">
+                                <strong>Todos os mensalistas</strong>
+                                <small class="d-block text-muted">Todos os jogadores marcados como mensalistas</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="acao" id="acaoPagos" value="apenas_pagos">
+                            <label class="form-check-label" for="acaoPagos">
+                                <strong>Apenas mensalistas com pagamento confirmado</strong>
+                                <small class="d-block text-muted">Somente jogadores com "mensalidade_paga = true"</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="acao" id="acaoSelecionados" value="apenas_selecionados">
+                            <label class="form-check-label" for="acaoSelecionados">
+                                <strong>Apenas jogadores selecionados</strong>
+                                <small class="d-block text-muted">Selecione abaixo os jogadores específicos</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Seletor de Jogadores (mostra apenas quando "apenas_selecionados" está ativo) -->
+                    <div id="seletorJogadores" class="mb-4" style="display: none;">
+                        <label class="form-label">Selecione os jogadores:</label>
+                        <div class="card" style="max-height: 300px; overflow-y: auto;">
+                            <div class="card-body">
+                                {% for jogador in mensalistas %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="jogadores_selecionados" 
+                                           value="{{ jogador.id }}" id="jogador{{ jogador.id }}">
+                                    <label class="form-check-label" for="jogador{{ jogador.id }}">
+                                        {{ jogador.nome }}
+                                        {% if jogador.mensalidade_paga %}
+                                        <span class="badge bg-success ms-2">Pago</span>
+                                        {% else %}
+                                        <span class="badge bg-warning ms-2">Pendente</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Confirmação:</h6>
+                        <p class="mb-0">
+                            Esta ação irá atualizar as datas de mensalidade dos jogadores selecionados.
+                            Jogadores com mensalidade vencida serão mantidos como mensalistas, mas com status de pagamento pendente.
+                        </p>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_mensalidades') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Definir Ciclo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-cog"></i> Opções do Sistema</h6>
+            </div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="definir_como_ciclo_ativo" name="definir_como_ciclo_ativo" checked>
+                    <label class="form-check-label" for="definir_como_ciclo_ativo">
+                        <strong>Definir como ciclo ativo do sistema</strong>
+                    </label>
+                    <div class="form-text">
+                        Este ciclo será salvo como referência para uso futuro na opção "Usar período do ciclo atual".
+                    </div>
+                </div>
+                
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="marcar_como_pago" name="marcar_como_pago">
+                    <label class="form-check-label" for="marcar_como_pago">
+                        <strong>Marcar como mensalidade paga</strong>
+                    </label>
+                    <div class="form-text">
+                        Marcar automaticamente a mensalidade como paga para os jogadores selecionados.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+// Quando a opção "marcar como pago" é alterada
+$('#marcar_como_pago').change(function() {
+    if (this.checked && $('#acaoSelecionados').is(':checked')) {
+        alert('Atenção: Todos os jogadores selecionados terão sua mensalidade marcada como PAGA.');
+    }
+});
+
+// Mostrar ciclo atual se existir
+{% if ciclo_atual_inicio and ciclo_atual_fim %}
+$(document).ready(function() {
+    // Adiciona informação sobre o ciclo atual
+    const alertHtml = `
+        <div class="alert alert-primary mt-3">
+            <h6><i class="fas fa-calendar-alt"></i> Ciclo Atual do Sistema</h6>
+            <p class="mb-0">
+                Atualmente o sistema está usando o ciclo: <strong>{{ ciclo_atual_inicio|format_date }} a {{ ciclo_atual_fim|format_date }}</strong>
+                ({{ (ciclo_atual_fim - ciclo_atual_inicio).days + 1 }} dias)
+            </p>
+        </div>
+    `;
+    $('#cicloForm .alert-warning').before(alertHtml);
+});
+{% endif %}
+
+$(document).ready(function() {
+    // Calcula duração e dias de jogo
+    function calcularDetalhesCiclo() {
+        const inicio = new Date($('#data_inicio').val());
+        const fim = new Date($('#data_fim').val());
+        
+        if (!isNaN(inicio.getTime()) && !isNaN(fim.getTime())) {
+            // Calcula duração em dias
+            const diffTime = Math.abs(fim - inicio);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            $('#duracaoCiclo').text(diffDays);
+            
+            // Calcula quintas-feiras no período
+            let quintas = 0;
+            let currentDate = new Date(inicio);
+            
+            while (currentDate <= fim) {
+                if (currentDate.getDay() === 4) { // 4 = quinta-feira
+                    quintas++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            $('#diasJogo').text(quintas);
+            
+            // Próxima quinta após o ciclo
+            let proximaQuinta = new Date(fim);
+            proximaQuinta.setDate(proximaQuinta.getDate() + 1);
+            while (proximaQuinta.getDay() !== 4) {
+                proximaQuinta.setDate(proximaQuinta.getDate() + 1);
+            }
+            $('#proximoJogo').text(proximaQuinta.toLocaleDateString('pt-BR'));
+        }
+    }
+    
+    $('#data_inicio, #data_fim').change(calcularDetalhesCiclo);
+    calcularDetalhesCiclo();
+    
+    // Mostra/esconde seletor de jogadores
+    $('input[name="acao"]').change(function() {
+        if ($(this).val() === 'apenas_selecionados') {
+            $('#seletorJogadores').show();
+        } else {
+            $('#seletorJogadores').hide();
+        }
+    });
+    
+    // Validação do formulário
+    $('#cicloForm').submit(function(e) {
+        const inicio = new Date($('#data_inicio').val());
+        const fim = new Date($('#data_fim').val());
+        
+        if (fim <= inicio) {
+            alert('A data de fim deve ser posterior à data de início!');
+            e.preventDefault();
+            return false;
+        }
+        
+        if ($('input[name="acao"]:checked').val() === 'apenas_selecionados') {
+            const selecionados = $('input[name="jogadores_selecionados"]:checked').length;
+            if (selecionados === 0) {
+                alert('Selecione pelo menos um jogador!');
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}

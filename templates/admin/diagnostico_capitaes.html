@@ -1,0 +1,238 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Diagnóstico de Capitães{% endblock %}
+
+{% block admin_content %}
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="fas fa-stethoscope"></i> Diagnóstico de Capitães</h2>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Capitães Configurados</h5>
+                </div>
+                <div class="card-body">
+                    {% if capitae_info %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Tem Usuário</th>
+                                    <th>Username</th>
+                                    <th>Role do User</th>
+                                    <th>Status</th>
+                                    <th>Problemas</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for capitao in capitae_info %}
+                                <tr class="{% if capitao.status == 'OK' %}table-success{% elif capitao.status == 'ERRO' %}table-warning{% else %}table-danger{% endif %}">
+                                    <td>{{ capitao.id }}</td>
+                                    <td>{{ capitao.nome }}</td>
+                                    <td>
+                                        {% if capitao.tem_usuario %}
+                                        <span class="badge bg-success">Sim</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Não</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ capitao.user_username or 'N/A' }}</td>
+                                    <td>{{ capitao.user_role or 'N/A' }}</td>
+                                    <td>
+                                        {% if capitao.status == 'OK' %}
+                                        <span class="badge bg-success">OK</span>
+                                        {% elif capitao.status == 'ERRO' %}
+                                        <span class="badge bg-warning">ERRO</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">CRÍTICO</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if capitao.problemas %}
+                                        <ul class="mb-0">
+                                            {% for problema in capitao.problemas %}
+                                            <li>{{ problema }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% else %}
+                                        <span class="text-muted">Nenhum</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('editar_jogador', id=capitao.id) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        <button onclick="corrigirCapitao({{ capitao.id }})" 
+                                                class="btn btn-sm btn-warning">
+                                            <i class="fas fa-wrench"></i> Corrigir
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Nenhum capitão configurado.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if usuarios_errados %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Usuários com Role "capitao" mas que não são capitães</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Estes usuários têm permissão de capitão mas o jogador vinculado não está marcado como capitão!
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Username</th>
+                                    <th>Jogador Vinculado</th>
+                                    <th>Jogador é Capitão?</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in usuarios_errados %}
+                                <tr class="table-danger">
+                                    <td>{{ user.id }}</td>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.jogador_nome or 'Nenhum' }}</td>
+                                    <td>
+                                        {% if user.jogador_capitao %}
+                                        <span class="badge bg-success">Sim</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Não</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.jogador_nome %}
+                                        <a href="{{ url_for('editar_jogador', id=user.id) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i> Editar Jogador
+                                        </a>
+                                        {% endif %}
+                                        <button onclick="corrigirRoleUsuario({{ user.id }})" 
+                                                class="btn btn-sm btn-danger">
+                                            <i class="fas fa-user-times"></i> Remover Role Capitão
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Ações em Massa</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href="{{ url_for('verificar_capitaes') }}" 
+                               class="btn btn-success btn-lg w-100 mb-2">
+                                <i class="fas fa-check-circle"></i> Verificar e Corrigir Todos
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <button onclick="corrigirTodosCapitaes()" 
+                                    class="btn btn-warning btn-lg w-100 mb-2">
+                                <i class="fas fa-sync-alt"></i> Sincronizar Todos
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{{ url_for('admin_jogadores') }}" 
+                               class="btn btn-secondary btn-lg w-100 mb-2">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function corrigirCapitao(jogadorId) {
+    if (confirm('Corrigir permissões deste capitão?')) {
+        fetch(`/admin/corrigir_capitao/${jogadorId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao corrigir capitão.');
+            });
+    }
+}
+
+function corrigirRoleUsuario(userId) {
+    if (confirm('Remover role "capitao" deste usuário?')) {
+        fetch(`/admin/corrigir_role_usuario/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao corrigir role.');
+            });
+    }
+}
+
+function corrigirTodosCapitaes() {
+    if (confirm('Sincronizar todos os capitães? Isso pode demorar um pouco.')) {
+        fetch('/admin/sincronizar_todos_capitaes')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Erro: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao sincronizar capitães.');
+            });
+    }
+}
+</script>
+{% endblock %}

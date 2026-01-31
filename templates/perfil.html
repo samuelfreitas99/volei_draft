@@ -1,0 +1,939 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil - Sistema de Vôlei{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+    
+    .profile-avatar {
+        width: 180px;
+        height: 180px;
+        border: 6px solid white;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        transition: transform 0.3s ease;
+        object-fit: cover;
+    }
+    
+    .profile-avatar:hover {
+        transform: scale(1.05);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .badge-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #2c3e50, #3498db);
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 25px;
+        padding-left: 20px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -10px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #2c3e50;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #2c3e50;
+    }
+    
+    .skill-bar {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .skill-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #2c3e50 0%, #3498db 100%);
+        border-radius: 4px;
+        transition: width 1s ease-in-out;
+    }
+    
+    .btn-edit {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-edit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(44, 62, 80, 0.4);
+        color: white;
+    }
+    
+    .photo-upload-area {
+        cursor: pointer;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .photo-upload-area:hover {
+        border-color: #3498db;
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    @media (max-width: 768px) {
+        .profile-header {
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .profile-avatar {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+        }
+        
+        .info-item {
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+        
+        .info-icon {
+            margin-bottom: 10px;
+        }
+    }
+    
+    /* Animation for stats cards */
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animated-card {
+        animation: slideUp 0.5s ease forwards;
+        opacity: 0;
+    }
+    
+    .animated-card:nth-child(1) { animation-delay: 0.1s; }
+    .animated-card:nth-child(2) { animation-delay: 0.2s; }
+    .animated-card:nth-child(3) { animation-delay: 0.3s; }
+    .animated-card:nth-child(4) { animation-delay: 0.4s; }
+    
+    /* Toast notifications */
+    .custom-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-md-3 text-center">
+                {% if jogador %}
+                    {% if jogador.foto_perfil %}
+                    <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                         class="profile-avatar rounded-circle">
+                    {% else %}
+                    <div class="profile-avatar rounded-circle bg-white d-flex align-items-center justify-content-center mx-auto">
+                        <i class="fas fa-user fa-4x text-primary"></i>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            
+            <div class="col-md-9">
+                <h1 class="display-5 fw-bold mb-2">
+                    {% if jogador %}
+                        {{ jogador.nome }}
+                        {% if jogador.apelido %}
+                        <span class="text-light fs-4 fw-normal">"{{ jogador.apelido }}"</span>
+                        {% endif %}
+                    {% else %}
+                        {{ current_user.username }}
+                    {% endif %}
+                </h1>
+                
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                    {% if jogador and jogador.mensalista %}
+                    <div class="d-flex align-items-center">
+                        <div class="badge-icon bg-success">
+                            <i class="fas fa-star text-white"></i>
+                        </div>
+                        <span class="text-white">Mensalista</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if jogador and jogador.capitao %}
+                    <div class="d-flex align-items-center">
+                        <div class="badge-icon bg-warning">
+                            <i class="fas fa-crown text-white"></i>
+                        </div>
+                        <span class="text-white">Capitão</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if jogador and jogador.posicao %}
+                    <div class="d-flex align-items-center">
+                        <div class="badge-icon bg-info">
+                            <i class="fas fa-volleyball-ball text-white"></i>
+                        </div>
+                        <span class="text-white">{{ get_posicao_display(jogador.posicao) }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if not jogador %}
+                <div class="mt-4">
+                    <div class="alert alert-warning d-inline-block mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Perfil Incompleto:</strong> Complete seu perfil para acessar todas as funcionalidades
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="row g-4">
+        <!-- Left Column - Personal Info -->
+        <div class="col-lg-8">
+            {% if not jogador %}
+            <!-- Empty Profile State -->
+            <div class="stats-card text-center py-5 animated-card">
+                <i class="fas fa-user-circle fa-4x text-muted mb-4"></i>
+                <h3 class="mb-3">Perfil não configurado</h3>
+                <p class="text-muted mb-4">Complete seu perfil de jogador para ter acesso completo ao sistema</p>
+                <a href="{{ url_for('completar_perfil') }}" class="btn btn-lg btn-primary">
+                    <i class="fas fa-user-edit me-2"></i>Completar Perfil
+                </a>
+            </div>
+            {% else %}
+            
+            <!-- Personal Information -->
+            <div class="stats-card animated-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0"><i class="fas fa-id-card text-primary me-2"></i>Informações Pessoais</h4>
+                    <a href="{{ url_for('editar_perfil') }}" class="btn-edit btn-sm">
+                        <i class="fas fa-edit me-2"></i>Editar
+                    </a>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Telefone</div>
+                                <div class="fw-bold">{{ jogador.telefone or 'Não informado' }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-city"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Cidade</div>
+                                <div class="fw-bold">{{ jogador.cidade or 'Não informado' }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-ruler-vertical"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Altura</div>
+                                <div class="fw-bold">{{ jogador.altura or 'Não informada' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-birthday-cake"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Idade</div>
+                                <div class="fw-bold">
+                                    {% if jogador.data_nascimento %}
+                                        {{ calcular_idade(jogador.data_nascimento) }} anos
+                                    {% else %}
+                                        Não informada
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Nível</div>
+                                <div class="fw-bold">
+                                    <span class="badge {% if jogador.nivel == 'iniciante' %}bg-info{% elif jogador.nivel == 'intermediario' %}bg-primary{% else %}bg-warning text-dark{% endif %} p-2">
+                                        {{ get_nivel_display(jogador.nivel) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Desde</div>
+                                <div class="fw-bold">{{ format_date(jogador.data_cadastro, '%d/%m/%Y') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+               <!-- Recent Activity -->
+            {% if historico and historico|length > 0 %}
+            <div class="stats-card animated-card">
+                <h4 class="mb-4"><i class="fas fa-history text-primary me-2"></i>Histórico Recente</h4>
+                <div class="timeline">
+                    {% for registro in historico[:5] %}
+                    <div class="timeline-item">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ format_date(registro.data, '%d/%m') }}</h6>
+                                        <p class="text-muted mb-0">{{ format_date(registro.data, '%A') }}</p>
+                                    </div>
+                                    <div>
+                                        {% if registro.confirmado %}
+                                        <span class="badge bg-success p-2">
+                                            <i class="fas fa-check-circle me-1"></i>Confirmado
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger p-2">
+                                            <i class="fas fa-times-circle me-1"></i>Não Confirmado
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if registro.presente %}
+                                        <span class="badge bg-primary p-2 ms-1">
+                                            <i class="fas fa-user-check me-1"></i>Presente
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if historico|length > 5 %}
+                <div class="text-center mt-3">
+                    <a href="#" class="text-decoration-none">
+                        <small>Ver histórico completo ({{ historico|length }})</small>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% elif historico %}
+            <!-- Histórico vazio -->
+            <div class="stats-card animated-card">
+                <h4 class="mb-4"><i class="fas fa-history text-primary me-2"></i>Histórico</h4>
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Nenhum histórico de presenças disponível.</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Account Info & Stats -->
+        <div class="col-lg-4">
+            <!-- Account Information -->
+            <div class="stats-card animated-card">
+                <h5 class="mb-3"><i class="fas fa-user-circle text-info me-2"></i>Conta</h5>
+                <div class="mb-3">
+                    <div class="text-muted small">Usuário</div>
+                    <div class="fw-bold">{{ current_user.username }}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small">E-mail</div>
+                    <div class="fw-bold">{{ current_user.email or 'Não informado' }}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small">Tipo de Conta</div>
+                    <div class="fw-bold">
+                        <span class="badge bg-info">{{ current_user.role|title }}</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small">Último Login</div>
+                    <div class="fw-bold">
+                        {% if current_user.last_login %}
+                            {{ format_date(current_user.last_login, '%d/%m %H:%M') }}
+                        {% else %}
+                            <span class="text-muted">Nunca</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            {% if jogador %}
+            <div class="stats-card animated-card">
+                <h5 class="mb-3"><i class="fas fa-chart-bar text-success me-2"></i>Estatísticas</h5>
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="display-6 fw-bold text-primary">
+                            {{ historico|length if historico else 0 }}
+                        </div>
+                        <div class="text-muted small">Partidas</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="display-6 fw-bold text-success">
+                            {{ historico|selectattr('presente')|list|length if historico else 0 }}
+                        </div>
+                        <div class="text-muted small">Presente</div>
+                    </div>
+                </div>
+                
+                {% if jogador.mensalista %}
+                <div class="alert alert-success mt-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-crown fa-2x me-3"></i>
+                        <div>
+                            <strong>Mensalista</strong>
+                            {% if jogador.mensalidade_paga %}
+                            <div class="text-success">Pagamento em dia</div>
+                            {% else %}
+                            <div class="text-warning">Pagamento pendente</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="stats-card animated-card">
+                <h5 class="mb-3"><i class="fas fa-bolt text-warning me-2"></i>Ações Rápidas</h5>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('editar_perfil') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Editar Perfil / Senha
+                    </a>
+                    
+                    <!-- BOTÃO NOVO: Redefinir Senha 
+                    <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalRedefinirSenha">
+                        <i class="fas fa-key me-2"></i>Redefinir Senha
+                    </button>-->
+                    
+                    {% if current_user.role == 'capitao' %}
+                    <a href="{{ url_for('capitao_dashboard') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-crown me-2"></i>Painel do Capitão
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Photo Upload -->
+            <div class="stats-card animated-card">
+                <h5 class="mb-3"><i class="fas fa-camera text-primary me-2"></i>Foto do Perfil</h5>
+                <div id="photoUploadArea" class="photo-upload-area">
+                    <div id="uploadPreview" class="mb-3">
+                        {% if jogador.foto_perfil %}
+                        <img src="{{ jogador.foto_perfil }}" alt="Preview" class="img-fluid rounded-circle" style="max-height: 100px;">
+                        {% else %}
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small" id="uploadText">
+                        {% if jogador.foto_perfil %}
+                        Clique para alterar foto
+                        {% else %}
+                        Arraste ou clique para enviar foto
+                        {% endif %}
+                    </div>
+                    <input type="file" id="photoInput" accept="image/*" class="d-none">
+                </div>
+                {% if jogador.foto_perfil %}
+                <button class="btn btn-sm btn-danger w-100 mt-2" onclick="removePhoto()">
+                    <i class="fas fa-trash me-1"></i>Remover Foto
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+{% block extra_js %}
+<script>
+    // Photo upload functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const uploadArea = document.getElementById('photoUploadArea');
+        const photoInput = document.getElementById('photoInput');
+        
+        if (uploadArea) {
+            // Click to upload
+            uploadArea.addEventListener('click', () => photoInput.click());
+            
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = 'rgba(52, 152, 219, 0.1)';
+                uploadArea.style.borderColor = '#3498db';
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.backgroundColor = '';
+                uploadArea.style.borderColor = '#dee2e6';
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = '';
+                uploadArea.style.borderColor = '#dee2e6';
+                
+                if (e.dataTransfer.files.length) {
+                    photoInput.files = e.dataTransfer.files;
+                    handleFileUpload(photoInput.files[0]);
+                }
+            });
+            
+            // File input change
+            photoInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+        }
+        
+        // Animate skill bars on scroll
+        const observerOptions = {
+            threshold: 0.5
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const progressBars = entry.target.querySelectorAll('.skill-progress');
+                    progressBars.forEach(bar => {
+                        const width = bar.style.width;
+                        bar.style.width = '0';
+                        setTimeout(() => {
+                            bar.style.width = width;
+                        }, 300);
+                    });
+                }
+            });
+        }, observerOptions);
+        
+        // Observe all stats cards
+        document.querySelectorAll('.stats-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // ========== CÓDIGO NOVO PARA REDEFINIR SENHA ==========
+        // Função para redefinir senha - PERFIL.HTML
+        const formRedefinirSenha = document.getElementById('formRedefinirSenha');
+        
+        if (formRedefinirSenha) {
+            formRedefinirSenha.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const senhaAtual = document.getElementById('senha_atual_perfil').value;
+                const novaSenha = document.getElementById('nova_senha_perfil').value;
+                const confirmarSenha = document.getElementById('confirmar_senha_perfil').value;
+                
+                // Validações
+                if (!senhaAtual) {
+                    showToast('Digite sua senha atual', 'error');
+                    return;
+                }
+                
+                if (novaSenha.length < 6) {
+                    showToast('A nova senha deve ter no mínimo 6 caracteres', 'error');
+                    return;
+                }
+                
+                if (novaSenha !== confirmarSenha) {
+                    showToast('As novas senhas não coincidem', 'error');
+                    return;
+                }
+                
+                // Mostrar loading
+                const submitBtn = formRedefinirSenha.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processando...';
+                submitBtn.disabled = true;
+                
+                // Enviar para o backend
+                fetch('/redefinir_senha_usuario', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        senha_atual: senhaAtual,
+                        nova_senha: novaSenha,
+                        confirmar_senha: confirmarSenha
+                    })
+                })
+                .then(response => {
+                    // Primeiro verifica se a resposta é JSON
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        return response.json().then(data => {
+                            if (!response.ok) {
+                                // Se a resposta não está OK, mas é JSON, retorna o erro
+                                throw { 
+                                    isJsonError: true, 
+                                    data: data,
+                                    status: response.status 
+                                };
+                            }
+                            return data;
+                        });
+                    } else {
+                        // Se não for JSON, lança erro genérico
+                        throw new Error('Resposta não é JSON');
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        showToast('Senha redefinida com sucesso!', 'success');
+                        // Fechar modal e limpar campos
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('modalRedefinirSenha'));
+                        if (modal) modal.hide();
+                        formRedefinirSenha.reset();
+                    } else {
+                        showToast(data.message || 'Erro ao redefinir senha', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro completo:', error);
+                    
+                    if (error.isJsonError) {
+                        // Erro do backend (401, 400, etc)
+                        showToast(error.data.message || 'Erro ao redefinir senha', 'error');
+                    } else if (error.message.includes('JSON')) {
+                        showToast('Erro no servidor. Tente novamente.', 'error');
+                    } else {
+                        showToast('Erro de conexão. Verifique sua internet.', 'error');
+                    }
+                })
+                .finally(() => {
+                    // Restaurar botão
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
+            });
+        }
+    });
+    
+    function handleFileUpload(file) {
+        if (!file.type.match('image.*')) {
+            showToast('Por favor, selecione uma imagem válida (JPG, PNG, GIF)', 'error');
+            return;
+        }
+        
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('A imagem deve ter no máximo 2MB', 'error');
+            return;
+        }
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('uploadPreview').innerHTML = 
+                `<img src="${e.target.result}" alt="Preview" class="img-fluid rounded-circle" style="max-height: 100px;">`;
+            document.getElementById('uploadText').textContent = 'Enviando...';
+        };
+        reader.readAsDataURL(file);
+        
+        const formData = new FormData();
+        formData.append('foto', file);
+        
+        fetch('{{ url_for("upload_foto_jogador") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Foto atualizada com sucesso!', 'success');
+                document.getElementById('uploadText').textContent = 'Clique para alterar foto';
+                
+                // Update all profile pictures on page
+                document.querySelectorAll('.profile-avatar').forEach(img => {
+                    if (img.tagName === 'IMG') {
+                        img.src = data.foto_url + '?t=' + new Date().getTime();
+                    }
+                });
+                
+                // Also update in the upload preview
+                document.getElementById('uploadPreview').innerHTML = 
+                    `<img src="${data.foto_url}?t=${new Date().getTime()}" alt="Preview" class="img-fluid rounded-circle" style="max-height: 100px;">`;
+                    
+            } else {
+                showToast(data.message || 'Erro ao enviar foto', 'error');
+                document.getElementById('uploadText').textContent = 'Clique para tentar novamente';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Erro ao enviar foto', 'error');
+            document.getElementById('uploadText').textContent = 'Clique para tentar novamente';
+        });
+    }
+    
+    function removePhoto() {
+        if (!confirm('Tem certeza que deseja remover sua foto de perfil?')) {
+            return;
+        }
+        
+        fetch('{{ url_for("upload_foto_jogador") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ remover: true })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Foto removida com sucesso!', 'success');
+                document.getElementById('uploadPreview').innerHTML = 
+                    '<i class="fas fa-cloud-upload-alt fa-3x text-muted"></i>';
+                document.getElementById('uploadText').textContent = 'Arraste ou clique para enviar foto';
+                
+                // Update all profile pictures on page
+                document.querySelectorAll('.profile-avatar').forEach(avatar => {
+                    if (avatar.tagName === 'IMG') {
+                        // Replace image with icon
+                        const parent = avatar.parentElement;
+                        avatar.remove();
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-user fa-4x text-primary';
+                        parent.appendChild(icon);
+                    } else if (avatar.classList.contains('d-flex')) {
+                        avatar.innerHTML = '<i class="fas fa-user fa-4x text-primary"></i>';
+                    }
+                });
+            } else {
+                showToast(data.message || 'Erro ao remover foto', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Erro ao remover foto', 'error');
+        });
+    }
+    
+    function showToast(message, type) {
+        // Remove existing toasts
+        document.querySelectorAll('.custom-toast').forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `custom-toast alert alert-${type} alert-dismissible fade show`;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-radius: 10px;
+        `;
+        
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                <span>${message}</span>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                const bsAlert = new bootstrap.Alert(toast);
+                bsAlert.close();
+            }
+        }, 5000);
+    }
+
+</script>
+
+ <!--   <div class="modal fade" id="modalRedefinirSenha" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2"></i>Redefinir Senha
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formRedefinirSenha">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Digite sua senha atual e a nova senha
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="senha_atual_perfil" class="form-label">Senha Atual *</label>
+                            <input type="password" class="form-control" id="senha_atual_perfil" name="senha_atual" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="nova_senha_perfil" class="form-label">Nova Senha *</label>
+                            <input type="password" class="form-control" id="nova_senha_perfil" name="nova_senha" required
+                                minlength="6" placeholder="Mínimo 6 caracteres">
+                            <div class="form-text">A senha deve ter no mínimo 6 caracteres</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirmar_senha_perfil" class="form-label">Confirmar Nova Senha *</label>
+                            <input type="password" class="form-control" id="confirmar_senha_perfil" name="confirmar_senha" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-2"></i>Salvar Nova Senha
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div> -->
+{% endblock %}
+
+

@@ -1,0 +1,538 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Editar Usuário {{ user.username }} - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_usuarios') }}">Usuários</a></li>
+                    <li class="breadcrumb-item active">Editar {{ user.username }}</li>
+                </ol>
+            </nav>
+            <h1 class="h2 mb-0">
+                <i class="fas fa-user-edit text-primary me-2"></i>Editar Usuário
+            </h1>
+            <p class="text-muted mb-0">ID: {{ user.id }} | Criado em: {{ user.created_at|format_date if user.created_at else 'N/A' }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin_usuarios') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show mb-4">
+                    <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
+                    {{ message|safe }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <!-- Formulário de Edição -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Informações do Usuário
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_editar_usuario_detalhes', id=user.id) }}" id="editarUsuarioForm">
+                        <!-- Username -->
+                        <div class="mb-4">
+                            <label for="username" class="form-label fw-semibold">
+                                <i class="fas fa-user me-2 text-primary"></i>Nome de Usuário *
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-at"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       value="{{ user.username }}"
+                                       placeholder="Digite o nome de usuário"
+                                       required>
+                            </div>
+                            <div class="form-text text-muted mt-2">
+                                <small>
+                                    • Não pode conter espaços<br>
+                                    • Use apenas letras minúsculas, números, pontos (.) ou underlines (_)<br>
+                                    • Mínimo 3 caracteres, máximo 30
+                                </small>
+                            </div>
+                            <div id="username-validation" class="mt-2"></div>
+                        </div>
+
+                        <!-- E-mail -->
+                        <div class="mb-4">
+                            <label for="email" class="form-label fw-semibold">
+                                <i class="fas fa-envelope me-2 text-primary"></i>E-mail
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       value="{{ user.email or '' }}"
+                                       placeholder="exemplo@email.com">
+                            </div>
+                            <div class="form-text text-muted mt-2">
+                                <small>Para recuperação de senha e notificações (opcional)</small>
+                            </div>
+                        </div>
+
+                        <!-- Permissão (Role) -->
+                        <div class="mb-4">
+                            <label for="role" class="form-label fw-semibold">
+                                <i class="fas fa-user-tag me-2 text-primary"></i>Permissão de Acesso *
+                            </label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="jogador" {% if user.role == 'jogador' %}selected{% endif %}>
+                                    Jogador (Acesso básico)
+                                </option>
+                                <option value="capitao" {% if user.role == 'capitao' %}selected{% endif %}>
+                                    Capitão (Pode gerenciar times)
+                                </option>
+                                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>
+                                    Administrador (Acesso total)
+                                </option>
+                            </select>
+                            <div class="form-text text-muted mt-2">
+                                <small>
+                                    • <strong>Jogador:</strong> Apenas confirma presença e vê estatísticas<br>
+                                    • <strong>Capitão:</strong> Gerencia times durante o draft<br>
+                                    • <strong>Administrador:</strong> Acesso total ao sistema
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Vincular Jogador -->
+                        <div class="mb-4">
+                            <label for="vincular_jogador_id" class="form-label fw-semibold">
+                                <i class="fas fa-link me-2 text-primary"></i>Vincular a Jogador
+                            </label>
+                            <select class="form-select" id="vincular_jogador_id" name="vincular_jogador_id">
+                                <option value="">-- Selecione um jogador --</option>
+                                {% for jogador_opcao in jogadores_disponiveis %}
+                                    <option value="{{ jogador_opcao.id }}" 
+                                            {% if user.jogador_id == jogador_opcao.id %}selected{% endif %}>
+                                        {{ jogador_opcao.nome }}
+                                        {% if jogador_opcao.apelido %}({{ jogador_opcao.apelido }}){% endif %}
+                                        {% if jogador_opcao.mensalista %}[Mensalista]{% endif %}
+                                        {% if jogador_opcao.capitao %}[Capitão]{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text text-muted mt-2">
+                                <small>
+                                    • Vincule este usuário a um jogador existente<br>
+                                    • Se não quiser vincular, deixe em branco<br>
+                                    • Para desvincular, selecione a opção vazia
+                                </small>
+                            </div>
+                            
+                            {% if jogador %}
+                            <div class="alert alert-warning mt-3">
+                                <div class="d-flex">
+                                    <i class="fas fa-exclamation-triangle me-3 mt-1"></i>
+                                    <div>
+                                        <h6 class="alert-heading mb-2">Atualmente vinculado a:</h6>
+                                        <p class="mb-1"><strong>{{ jogador.nome }}</strong></p>
+                                        <p class="mb-0">
+                                            <small>
+                                                Para desvincular completamente, marque a opção abaixo:
+                                            </small>
+                                        </p>
+                                        <div class="form-check mt-2">
+                                            <input class="form-check-input" type="checkbox" id="desvincular_jogador" name="desvincular_jogador" value="true">
+                                            <label class="form-check-label" for="desvincular_jogador">
+                                                <strong>Desvincular deste jogador</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Reset de Senha -->
+                        <div class="mb-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning bg-opacity-10 py-2">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-key me-2 text-warning"></i>Redefinir Senha
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="reset_password" name="reset_password">
+                                        <label class="form-check-label" for="reset_password">
+                                            <strong>Redefinir senha do usuário</strong>
+                                            <small class="text-muted d-block">
+                                                Marque esta opção para alterar a senha do usuário
+                                            </small>
+                                        </label>
+                                    </div>
+                                    <div id="nova_senha_container" class="collapse">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="nova_senha" class="form-label">Nova Senha</label>
+                                                <div class="input-group">
+                                                    <input type="password" 
+                                                           class="form-control" 
+                                                           id="nova_senha" 
+                                                           name="nova_senha"
+                                                           placeholder="Deixe em branco para gerar automaticamente">
+                                                    <button class="btn btn-outline-secondary" type="button" id="toggle_nova_senha">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="confirmar_nova_senha" class="form-label">Confirmar Nova Senha</label>
+                                                <div class="input-group">
+                                                    <input type="password" 
+                                                           class="form-control" 
+                                                           id="confirmar_nova_senha" 
+                                                           name="confirmar_nova_senha"
+                                                           placeholder="Confirme a nova senha">
+                                                    <button class="btn btn-outline-secondary" type="button" id="toggle_confirmar_senha">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-text text-muted mt-2">
+                                            <small>
+                                                • Se deixar em branco, uma senha aleatória será gerada<br>
+                                                • Mínimo 6 caracteres<br>
+                                                • A nova senha será exibida uma vez após a alteração
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-between mt-4 pt-4 border-top">
+                            <a href="{{ url_for('admin_usuarios') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de Informações -->
+        <div class="col-lg-4">
+            <!-- Informações do Usuário -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Informações Atuais
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Usuário</label>
+                        <p class="fw-bold h5">{{ user.username }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Permissão</label>
+                        <p>
+                            {% if user.role == 'admin' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-user-shield me-1"></i>Administrador
+                                </span>
+                            {% elif user.role == 'capitao' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-user-tie me-1"></i>Capitão
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-user me-1"></i>Jogador
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">E-mail</label>
+                        <p class="mb-0">{{ user.email or 'Não informado' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Último Login</label>
+                        <p class="mb-0">
+                            {% if user.last_login %}
+                                {{ user.last_login|format_date('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                                <span class="text-muted">Nunca</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Criado em</label>
+                        <p class="mb-0">{{ user.created_at|format_date('%d/%m/%Y %H:%M') if user.created_at else 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informações do Jogador Vinculado -->
+            {% if jogador %}
+            <div class="card shadow">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check me-2"></i>Jogador Vinculado
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if jogador.foto_perfil %}
+                            <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                                 class="img-fluid rounded-circle border" style="width: 100px; height: 100px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" 
+                                 style="width: 100px; height: 100px;">
+                                <i class="fas fa-user fa-3x text-secondary"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Nome</label>
+                        <p class="fw-bold h6">{{ jogador.nome }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Apelido</label>
+                        <p class="mb-0">{{ jogador.apelido or 'Não informado' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Telefone</label>
+                        <p class="mb-0">{{ jogador.telefone or 'Não informado' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Status</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if jogador.mensalista %}
+                                <span class="badge bg-primary">Mensalista</span>
+                            {% endif %}
+                            {% if jogador.capitao %}
+                                <span class="badge bg-warning">Capitão</span>
+                            {% endif %}
+                            <span class="badge {% if jogador.ativo %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ 'Ativo' if jogador.ativo else 'Inativo' }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('editar_jogador', id=jogador.id) }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt me-1"></i>Editar Jogador
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Validação de username em tempo real
+    document.getElementById('username').addEventListener('input', function(e) {
+        const username = this.value.toLowerCase().replace(/\s+/g, '');
+        this.value = username;
+        
+        const validationDiv = document.getElementById('username-validation');
+        
+        if (username.length < 3) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Mínimo 3 caracteres</small>';
+        } else if (username.length > 30) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Máximo 30 caracteres</small>';
+        } else if (username.includes(' ')) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Não pode conter espaços</small>';
+        } else if (!/^[a-z0-9._]+$/.test(username)) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Use apenas letras, números, . ou _</small>';
+        } else {
+            validationDiv.innerHTML = '<small class="text-success">✓ Formato válido</small>';
+        }
+    });
+
+    // Mostrar/ocultar campo de nova senha
+    document.getElementById('reset_password').addEventListener('change', function() {
+        const container = document.getElementById('nova_senha_container');
+        if (this.checked) {
+            container.classList.add('show');
+        } else {
+            container.classList.remove('show');
+            // Limpar campos
+            document.getElementById('nova_senha').value = '';
+            document.getElementById('confirmar_nova_senha').value = '';
+        }
+    });
+
+    // Alternar visibilidade das senhas
+    document.getElementById('toggle_nova_senha').addEventListener('click', function() {
+        const input = document.getElementById('nova_senha');
+        const icon = this.querySelector('i');
+        togglePasswordVisibility(input, icon);
+    });
+
+    document.getElementById('toggle_confirmar_senha').addEventListener('click', function() {
+        const input = document.getElementById('confirmar_nova_senha');
+        const icon = this.querySelector('i');
+        togglePasswordVisibility(input, icon);
+    });
+
+    function togglePasswordVisibility(input, icon) {
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+            input.parentElement.classList.add('password-visible');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+            input.parentElement.classList.remove('password-visible');
+        }
+    }
+
+    // Validação do formulário
+    document.getElementById('editarUsuarioForm').addEventListener('submit', function(e) {
+        const username = document.getElementById('username').value;
+        const resetPassword = document.getElementById('reset_password').checked;
+        const novaSenha = document.getElementById('nova_senha').value;
+        const confirmarSenha = document.getElementById('confirmar_nova_senha').value;
+        const desvincular = document.getElementById('desvincular_jogador');
+        const vincularJogador = document.getElementById('vincular_jogador_id');
+        
+        // Validação do username
+        if (username.length < 3) {
+            e.preventDefault();
+            alert('O nome de usuário deve ter pelo menos 3 caracteres.');
+            return false;
+        }
+        
+        if (username.includes(' ')) {
+            e.preventDefault();
+            alert('O nome de usuário não pode conter espaços.');
+            return false;
+        }
+        
+        if (!/^[a-z0-9._]+$/.test(username)) {
+            e.preventDefault();
+            alert('Use apenas letras minúsculas, números, pontos (.) ou underlines (_).');
+            return false;
+        }
+        
+        // Validação da senha se estiver resetando
+        if (resetPassword && novaSenha) {
+            if (novaSenha.length < 6) {
+                e.preventDefault();
+                alert('A nova senha deve ter pelo menos 6 caracteres.');
+                return false;
+            }
+            
+            if (novaSenha !== confirmarSenha) {
+                e.preventDefault();
+                alert('As senhas não coincidem.');
+                return false;
+            }
+        }
+        
+        // Validação de desvinculação
+        if (desvincular && desvincular.checked && vincularJogador.value) {
+            e.preventDefault();
+            alert('Não é possível desvincular e vincular um jogador ao mesmo tempo.');
+            return false;
+        }
+        
+        return true;
+    });
+
+    // Focar no campo de username ao carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('username').focus();
+    });
+</script>
+
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .card-header {
+        border-bottom: none;
+    }
+    
+    .form-text small {
+        line-height: 1.4;
+    }
+    
+    .badge {
+        font-size: 0.85em;
+        padding: 0.35em 0.65em;
+    }
+    
+    /* Animação suave para o collapse */
+    .collapse {
+        transition: height 0.3s ease;
+    }
+    
+    /* Estilo para os botões de mostrar/ocultar senha */
+    .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .input-group.password-visible {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .border-top {
+        border-top: 1px solid #dee2e6 !important;
+    }
+    
+    .form-label small {
+        font-size: 0.875em;
+    }
+    
+    .img-fluid.rounded-circle {
+        border: 3px solid #dee2e6;
+    }
+</style>
+{% endblock %}

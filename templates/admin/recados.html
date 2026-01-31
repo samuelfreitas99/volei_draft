@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Gerenciar Recados/Mural{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>
+        <i class="fas fa-bullhorn"></i> Gerenciar Recados
+    </h4>
+    <a href="{{ url_for('novo_recado') }}" class="btn btn-success">
+        <i class="fas fa-plus"></i> Novo Recado
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Título</th>
+                        <th>Conteúdo</th>
+                        <th>Autor</th>
+                        <th>Status</th>
+                        <th>Publicação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recado in recados %}
+                    <tr>
+                        <td>
+                            <strong>{{ recado.titulo }}</strong>
+                            {% if recado.importante %}
+                                <span class="badge bg-danger ms-1">IMPORTANTE</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ recado.conteudo|truncate(50) }}</small>
+                        </td>
+                        <td>{{ recado.autor }}</td>
+                        <td>
+                            {% if recado.ativo %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ format_date(recado.data_publicacao, '%d/%m/%Y') }}
+                            {% if recado.data_expiracao %}
+                                <br><small>Expira: {{ format_date(recado.data_expiracao) }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('editar_recado', id=recado.id) }}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{{ url_for('excluir_recado', id=recado.id) }}" 
+                                   class="btn btn-outline-danger"
+                                   onclick="return confirm('Excluir este recado?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3">
+    <h6><i class="fas fa-info-circle"></i> Informações:</h6>
+    <ul class="mb-0">
+        <li>Recados aparecem na página inicial para todos os usuários</li>
+        <li>Recados "IMPORTANTE" aparecem em destaque</li>
+        <li>Recados inativos não são exibidos</li>
+        <li>Recados com data de expiração são automaticamente desativados após a data</li>
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,165 @@
+<!-- templates/cofre/modais_simplificado.html -->
+<!-- Modal: Adicionar Dinheiro -->
+<div class="modal fade" id="modalDeposito" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Adicionar Dinheiro ao Cofre</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formDeposito">
+                    <div class="mb-3">
+                        <label class="form-label">Valor (R$)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control" name="valor" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" class="form-control" name="descricao" 
+                               value="Depósito manual" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observação (opcional)</label>
+                        <textarea class="form-control" name="observacao" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="realizarDeposito()">
+                    <i class="bi bi-check-circle me-1"></i>Confirmar Depósito
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Retirar Dinheiro -->
+<div class="modal fade" id="modalSaque" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-dash-circle me-2"></i>Retirar Dinheiro do Cofre</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formSaque">
+                    <div class="mb-3">
+                        <label class="form-label">Valor (R$)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control" name="valor" 
+                                   step="0.01" min="0" max="{{ saldo_total }}" required>
+                        </div>
+                        <small class="text-muted">Saldo disponível: R$ {{ "%.2f"|format(saldo_total) }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motivo da Retirada</label>
+                        <select class="form-select" name="motivo" required>
+                            <option value="">Selecione o motivo...</option>
+                            <option value="compra_materiais">Compra de Materiais</option>
+                            <option value="lanche">Lanche para Jogadores</option>
+                            <option value="manutencao">Manutenção de Equipamentos</option>
+                            <option value="evento">Evento Especial</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição Detalhada</label>
+                        <textarea class="form-control" name="descricao" rows="2" required 
+                                  placeholder="Descreva detalhadamente para que o dinheiro será usado..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comprovante (opcional)</label>
+                        <input type="text" class="form-control" name="comprovante" 
+                               placeholder="Número do comprovante ou referência...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="realizarSaque()">
+                    <i class="bi bi-check-circle me-1"></i>Confirmar Retirada
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Alterar Valor Padrão -->
+<div class="modal fade" id="modalValor" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-cash-coin me-2"></i>Alterar Valor Padrão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Este valor será aplicado a TODOS os jogadores não-mensalistas da semana.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Novo Valor Padrão (R$)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" class="form-control" id="novoValorPadrao" 
+                               value="{{ valor_padrao }}" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="atualizarValorPadraoModal()">
+                    <i class="bi bi-check-circle me-1"></i>Aplicar a Todos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Observação -->
+<div class="modal fade" id="modalObservacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-chat-text me-2"></i>Observação do Pagamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="observacaoJogadorId">
+                <div class="mb-3">
+                    <label class="form-label">Observação</label>
+                    <textarea class="form-control" id="observacaoTexto" rows="3" 
+                              placeholder="Adicione uma observação sobre este pagamento..."></textarea>
+                </div>
+                <small class="text-muted">Esta observação ficará registrada no histórico do pagamento.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarObservacao()">
+                    <i class="bi bi-save me-1"></i>Salvar Observação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function atualizarValorPadraoModal() {
+        const novoValor = document.getElementById('novoValorPadrao').value;
+        if (!novoValor || novoValor <= 0) {
+            alert('Informe um valor válido!');
+            return;
+        }
+        
+        valorPadrao = parseFloat(novoValor);
+        atualizarValorPadrao();
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalValor'));
+        modal.hide();
+    }
+</script>

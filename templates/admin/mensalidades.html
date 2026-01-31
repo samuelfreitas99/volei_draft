@@ -1,0 +1,405 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Gestão de Mensalidades{% endblock %}
+
+{% block admin_content %}
+<div class="row">
+    <!-- Cards de Resumo -->
+    <div class="col-12 mb-4">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">Total Mensalistas</h6>
+                                <h3 class="mb-0">{{ resumo.total_mensalistas }}</h3>
+                            </div>
+                            <i class="fas fa-users fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">Mensalidades Pagas</h6>
+                                <h3 class="mb-0">{{ resumo.mensalistas_pagos }}</h3>
+                            </div>
+                            <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">No Ciclo Atual</h6>
+                                <h3 class="mb-0">{{ resumo.no_ciclo_atual }}</h3>
+                                {% if resumo.ciclo_atual_inicio %}
+                                <small>{{ format_date(resumo.ciclo_atual_inicio) }} a {{
+                                    format_date(resumo.ciclo_atual_fim) }}</small>
+                                {% endif %}
+                            </div>
+                            <i class="fas fa-calendar-check fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card text-white bg-danger">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title">Mensalistas Vencidos</h6>
+                                <h3 class="mb-0">{{ resumo.mensalistas_vencidos }}</h3>
+                                {% if resumo.proximo_vencimento %}
+                                <small>Próximo: {{ format_date(resumo.proximo_vencimento) }}</small>
+                                {% endif %}
+                            </div>
+                            <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Ações Rápidas -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('definir_ciclo_mensalidade') }}" class="btn btn-primary">
+                        <i class="fas fa-calendar-plus"></i> Definir Novo Ciclo
+                    </a>
+
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal"
+                        data-bs-target="#renovarVencidosModal">
+                        <i class="fas fa-redo"></i> Renovar Vencidos
+                    </button>
+
+                    <a href="{{ url_for('relatorio_mensalidades') }}" class="btn btn-info">
+                        <i class="fas fa-file-alt"></i> Relatório Completo
+                    </a>
+
+                    <a href="{{ url_for('admin_jogadores') }}" class="btn btn-secondary">
+                        <i class="fas fa-user-edit"></i> Gerenciar Jogadores
+                    </a>
+                </div>
+
+                <hr>
+
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-lightbulb"></i> Sugestão:</h6>
+                    <p class="mb-1">Próximo ciclo sugerido:</p>
+                    <p class="mb-0"><strong>{{ format_date(proximo_inicio) }} a {{ format_date(proximo_fim) }}</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ciclo Ativo do Sistema -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Ciclo Ativo do Sistema</h5>
+            </div>
+            <div class="card-body">
+                {% set ciclo_inicio, ciclo_fim = obter_ciclo_das_configuracoes() %}
+                {% if ciclo_inicio and ciclo_fim %}
+                <div class="row">
+                    <div class="col-md-12">
+                        <h6>Período:</h6>
+                        <h4>{{ ciclo_inicio|format_date }} a {{ ciclo_fim|format_date }}</h4>
+                        <p class="mb-1"><strong>Duração:</strong> {{ (ciclo_fim - ciclo_inicio).days + 1 }} dias</p>
+                        <p class="mb-1">
+                            <strong>Jogadores no ciclo:</strong>
+                            {% set jogadores_no_ciclo = obter_jogadores_no_ciclo_atual() %}
+                            {{ jogadores_no_ciclo|length }}
+                        </p>
+                        <p class="mb-0">
+                            <a href="{{ url_for('admin_ciclos') }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-cog"></i> Gerenciar Ciclos
+                            </a>
+                            <a href="{{ url_for('definir_ciclo_mensalidade') }}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-sync-alt"></i> Atualizar Ciclo
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <h6>Nenhum ciclo ativo configurado</h6>
+                    <p class="mb-0">
+                        Configure um ciclo para usar no sistema de mensalidades.
+                        <a href="{{ url_for('definir_ciclo_mensalidade') }}" class="alert-link">Clique aqui para definir
+                            um ciclo</a>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Mensalistas -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Mensalistas</h5>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-light active"
+                            data-filter="todos">Todos</button>
+                        <button type="button" class="btn btn-sm btn-outline-light" data-filter="pagos">Pagos</button>
+                        <button type="button" class="btn btn-sm btn-outline-light"
+                            data-filter="pendentes">Pendentes</button>
+                        <button type="button" class="btn btn-sm btn-outline-light"
+                            data-filter="vencidos">Vencidos</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Mensalistas Pagos -->
+                {% if mensalistas_pagos %}
+                <div class="mb-4 filter-section" data-status="pagos">
+                    <h6 class="text-success mb-3">
+                        <i class="fas fa-check-circle"></i> Pagos ({{ mensalistas_pagos|length }})
+                    </h6>
+                    <div class="list-group">
+                        {% for item in mensalistas_pagos %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    {% if item.jogador.foto_perfil %}
+                                    <img src="{{ item.jogador.foto_perfil }}" alt="{{ item.jogador.nome }}"
+                                        class="rounded-circle me-3"
+                                        style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="mb-1">{{ item.jogador.nome }}</h6>
+                                        <small class="text-muted">
+                                            Válida até: {{ format_date(item.jogador.data_fim_mensalidade) }}
+                                            {% if item.dias_restantes is not none %}
+                                            <span class="badge bg-success ms-2">{{ item.dias_restantes }} dias
+                                                restantes</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('gerenciar_mensalidade', id=item.jogador.id) }}"
+                                        class="btn btn-sm btn-outline-primary" title="Gerenciar">
+                                        <i class="fas fa-cog"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Mensalistas Pendentes -->
+                {% if mensalistas_pendentes %}
+                <div class="mb-4 filter-section" data-status="pendentes">
+                    <h6 class="text-warning mb-3">
+                        <i class="fas fa-clock"></i> Pendentes ({{ mensalistas_pendentes|length }})
+                    </h6>
+                    <div class="list-group">
+                        {% for item in mensalistas_pendentes %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    {% if item.jogador.foto_perfil %}
+                                    <img src="{{ item.jogador.foto_perfil }}" alt="{{ item.jogador.nome }}"
+                                        class="rounded-circle me-3"
+                                        style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="mb-1">{{ item.jogador.nome }}</h6>
+                                        <small class="text-muted">
+                                            {% if item.jogador.data_fim_mensalidade %}
+                                            Válida até: {{ format_date(item.jogador.data_fim_mensalidade) }}
+                                            {% if item.dias_restantes is not none %}
+                                            <span class="badge bg-warning ms-2">{{ item.dias_restantes }} dias
+                                                restantes</span>
+                                            {% endif %}
+                                            {% else %}
+                                            <span class="text-danger">Sem data definida</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('gerenciar_mensalidade', id=item.jogador.id) }}"
+                                        class="btn btn-sm btn-outline-warning" title="Gerenciar">
+                                        <i class="fas fa-cog"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Mensalistas Vencidos -->
+                {% if mensalistas_vencidos %}
+                <div class="mb-4 filter-section" data-status="vencidos">
+                    <h6 class="text-danger mb-3">
+                        <i class="fas fa-exclamation-triangle"></i> Vencidos ({{ mensalistas_vencidos|length }})
+                    </h6>
+                    <div class="list-group">
+                        {% for item in mensalistas_vencidos %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    {% if item.jogador.foto_perfil %}
+                                    <img src="{{ item.jogador.foto_perfil }}" alt="{{ item.jogador.nome }}"
+                                        class="rounded-circle me-3"
+                                        style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="mb-1">{{ item.jogador.nome }}</h6>
+                                        <small class="text-muted">
+                                            {% if item.jogador.data_fim_mensalidade %}
+                                            Venceu em: {{ format_date(item.jogador.data_fim_mensalidade) }}
+                                            {% if item.dias_restantes is not none and item.dias_restantes < 0 %} <span
+                                                class="badge bg-danger ms-2">Vencido há {{ -item.dias_restantes }}
+                                                dias</span>
+                                                {% endif %}
+                                                {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('gerenciar_mensalidade', id=item.jogador.id) }}"
+                                        class="btn btn-sm btn-outline-danger" title="Gerenciar">
+                                        <i class="fas fa-cog"></i>
+                                    </a>
+                                    <a href="{{ url_for('renovar_mensalidade', id=item.jogador.id) }}"
+                                        class="btn btn-sm btn-success" title="Renovar">
+                                        <i class="fas fa-redo"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not mensalistas_pagos and not mensalistas_pendentes and not mensalistas_vencidos %}
+                <div class="text-center py-5">
+                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Nenhum mensalista cadastrado.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Renovar Vencidos -->
+<div class="modal fade" id="renovarVencidosModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-redo"></i> Renovar Mensalistas Vencidos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('renovar_mensalidades_vencidas') }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Atenção:</h6>
+                        <p class="mb-0">
+                            Esta ação irá renovar automaticamente todos os mensalistas vencidos
+                            para o ciclo atual do sistema. As mensalidades serão marcadas
+                            como "pagos" para o novo ciclo.
+                        </p>
+                    </div>
+
+                    {% set ciclo_inicio, ciclo_fim = obter_ciclo_das_configuracoes() %}
+                    {% if ciclo_inicio and ciclo_fim %}
+                    <p><strong>Serão renovados para o ciclo:</strong></p>
+                    <p class="mb-2">{{ format_date(ciclo_inicio) }} a {{ format_date(ciclo_fim) }}</p>
+                    {% endif %}
+
+                    <p><strong>Mensalistas a renovar: {{ resumo.mensalistas_vencidos }}</strong></p>
+
+                    {% if resumo.mensalistas_vencidos == 0 %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Não há mensalistas vencidos para renovar.
+                    </div>
+                    {% endif %}
+
+                    {% if not ciclo_inicio or not ciclo_fim %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        É necessário ter um ciclo ativo configurado para renovar mensalistas vencidos.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning" {% if resumo.mensalistas_vencidos==0 or not
+                        ciclo_inicio or not ciclo_fim %}disabled{% endif %}>
+                        <i class="fas fa-redo"></i> Renovar Vencidos
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-section {
+        display: block;
+    }
+
+    .card-body .row {
+        margin-bottom: 0;
+    }
+
+    .card-body .row>div {
+        margin-bottom: 15px;
+    }
+
+    .card-body .row>div:last-child {
+        margin-bottom: 0;
+    }
+</style>
+
+<script>
+    $(document).ready(function () {
+        // Filtro de status
+        $('[data-filter]').click(function () {
+            var filter = $(this).data('filter');
+
+            // Ativa botão
+            $('[data-filter]').removeClass('active');
+            $(this).addClass('active');
+
+            // Mostra/oculta seções
+            if (filter === 'todos') {
+                $('.filter-section').show();
+            } else {
+                $('.filter-section').hide();
+                $('.filter-section[data-status="' + filter + '"]').show();
+            }
+        });
+    });
+</script>
+{% endblock %}

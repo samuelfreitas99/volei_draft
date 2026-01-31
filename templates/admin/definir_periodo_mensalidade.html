@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Definir Período de Mensalidade{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt"></i> Definir Período para Todos os Mensalistas
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('definir_periodo_mensalidade') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Data de Início do Período</label>
+                        <input type="date" class="form-control" name="data_inicio" 
+                               value="{{ date.today().strftime('%Y-%m-%d') }}" required>
+                        <small class="text-muted">Data a partir da qual a mensalidade será válida</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Data de Fim do Período</label>
+                        <input type="date" class="form-control" name="data_fim" required>
+                        <small class="text-muted">Data até a qual a mensalidade será válida</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Informações:</h6>
+                        <ul class="mb-0">
+                            <li>Esta ação atualizará o período de <strong>TODOS</strong> os mensalistas ativos</li>
+                            <li>O status de "mensalidade paga" será mantido</li>
+                            <li>Mensalistas com período atual não serão afetados se já tiverem data de início</li>
+                            <li>Total de mensalistas ativos: <strong>{{ Jogador.query.filter_by(mensalista=True, ativo=True).count() }}</strong></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Aplicar a Todos os Mensalistas
+                        </button>
+                        <a href="{{ url_for('admin_jogadores') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Definir data padrão para 30 dias a frente
+document.addEventListener('DOMContentLoaded', function() {
+    const hoje = new Date();
+    const dataFim = new Date(hoje);
+    dataFim.setDate(dataFim.getDate() + 30);
+    
+    // Formatar para YYYY-MM-DD
+    const formatarData = (data) => {
+        return data.toISOString().split('T')[0];
+    };
+    
+    document.querySelector('input[name="data_fim"]').value = formatarData(dataFim);
+});
+</script>
+{% endblock %}

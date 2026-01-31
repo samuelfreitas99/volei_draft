@@ -1,0 +1,88 @@
+<!-- Modal Configuração Draft -->
+<div class="modal fade admin-modal" id="configDraftModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-cog me-2"></i>Configurar Draft
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('iniciar_draft') }}">
+                <input type="hidden" name="semana_id" value="{{ semana.id }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="max_times" class="form-label">Número de Times</label>
+                            <select class="form-select" id="max_times" name="max_times" required>
+                                {% for num in [2, 3, 4, 5, 6] %}
+                                <option value="{{ num }}" {% if semana.max_times==num %}selected{% endif %}>
+                                    {{ num }} Times
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="max_jogadores_por_time" class="form-label">Jogadores por Time</label>
+                            <select class="form-select" id="max_jogadores_por_time" name="max_jogadores_por_time" required>
+                                {% for num in [4, 5, 6, 7, 8, 9, 10] %}
+                                <option value="{{ num }}" {% if semana.max_jogadores_por_time==num %}selected{% endif %}>
+                                    {{ num }} jogadores
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="modo_draft" class="form-label">Modo do Draft</label>
+                            <select class="form-select" id="modo_draft" name="modo_draft" required>
+                                <option value="snake" {% if semana.modo_draft=='snake' %}selected{% endif %}>
+                                    Snake Draft (recomendado)
+                                </option>
+                                <option value="linear" {% if semana.modo_draft=='linear' %}selected{% endif %}>
+                                    Linear
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tempo por Escolha</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="fas fa-clock text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control bg-light" value="Sem tempo limite" readonly>
+                            </div>
+                            <div class="form-text small">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Draft sem contador de tempo (configuração fixa)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Requisitos para iniciar:</h6>
+                        <ul class="mb-0">
+                            <li>Lista de presença fechada <i class="fas fa-check text-success"></i></li>
+                            <li>Capitães confirmados: 
+                                <span id="capitaesAtual">{{ total_capitaes }}</span>/<span id="capitaesNecessarios">{{ semana.max_times }}</span>
+                            </li>
+                            <li>Jogadores confirmados: 
+                                <span id="jogadoresAtual">{{ confirmados }}</span>/<span id="jogadoresNecessarios">{{ semana.max_times * semana.max_jogadores_por_time }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-play me-2"></i>Iniciar Draft
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

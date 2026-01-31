@@ -1,0 +1,244 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Gerenciar Mensalidade - {{ jogador.nome }}{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-money-bill-wave"></i> Gerenciar Mensalidade - {{ jogador.nome }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('gerenciar_mensalidade', id=jogador.id) }}">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="mensalista" name="mensalista" {% if
+                                    jogador.mensalista %}checked{% endif %}>
+                                <label class="form-check-label" for="mensalista">
+                                    <i class="fas fa-star text-warning"></i> Mensalista
+                                </label>
+                            </div>
+                            <div class="form-text">Marcar como mensalista</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="mensalidade_paga"
+                                    name="mensalidade_paga" {% if jogador.mensalidade_paga %}checked{% endif %}>
+                                <label class="form-check-label" for="mensalidade_paga">
+                                    <i class="fas fa-check-circle text-success"></i> Mensalidade Paga
+                                </label>
+                            </div>
+                            <div class="form-text">Marcar se a mensalidade está paga</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="data_inicio_mensalidade" class="form-label">
+                                <i class="fas fa-calendar-plus"></i> Data Início Mensalidade
+                            </label>
+                            <input type="date" class="form-control" id="data_inicio_mensalidade"
+                                name="data_inicio_mensalidade"
+                                value="{{ jogador.data_inicio_mensalidade.strftime('%Y-%m-%d') if jogador.data_inicio_mensalidade else '' }}">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="data_fim_mensalidade" class="form-label">
+                                <i class="fas fa-calendar-times"></i> Data Fim Mensalidade
+                            </label>
+                            <input type="date" class="form-control" id="data_fim_mensalidade"
+                                name="data_fim_mensalidade"
+                                value="{{ jogador.data_fim_mensalidade.strftime('%Y-%m-%d') if jogador.data_fim_mensalidade else '' }}">
+                            <div class="form-text">Deixe em branco para mensalidade indefinida</div>
+                        </div>
+                    </div>
+
+                    <!-- NOVO CAMPO: Usar ciclo atual -->
+                    <!-- NOVO CAMPO: Usar ciclo atual -->
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="usar_ciclo_atual"
+                                    name="usar_ciclo_atual">
+                                <label class="form-check-label" for="usar_ciclo_atual">
+                                    <i class="fas fa-calendar-check text-info"></i> Usar período do ciclo atual
+                                </label>
+                                <div class="form-text">
+                                    {% if ciclo_atual_inicio and ciclo_atual_fim %}
+                                    <strong>Ciclo atual do sistema:</strong> {{ format_date(ciclo_atual_inicio) }} a {{
+                                    format_date(ciclo_atual_fim) }}
+                                    ({{ (ciclo_atual_fim - ciclo_atual_inicio).days + 1 }} dias totais)
+                                    {% if dias_restantes_ciclo > 0 %}
+                                    - <span class="text-success">{{ dias_restantes_ciclo }} dias restantes</span>
+                                    {% else %}
+                                    - <span class="text-warning">Ciclo não ativo</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-warning">Nenhum ciclo ativo encontrado</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Instruções:</h6>
+                        <ul class="mb-0">
+                            <li>Marque <strong>Mensalidade Paga</strong> para ativar automaticamente as datas</li>
+                            <li>Use <strong>Usar período do ciclo atual</strong> para alinhar com o ciclo vigente</li>
+                            <li>Se a data de fim passar e mensalidade não estiver paga, o jogador será automaticamente
+                                removido de mensalista</li>
+                            <li>Use o botão <strong>Renovar Mensalidade</strong> para estender por mais 30 dias</li>
+                        </ul>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_jogadores') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+
+                        {% if jogador.mensalista %}
+                        <a href="{{ url_for('renovar_mensalidade', id=jogador.id) }}" class="btn btn-warning me-2">
+                            <i class="fas fa-sync-alt"></i> Renovar Mensalidade (30 dias)
+                        </a>
+
+                        <a href="{{ url_for('remover_mensalista', id=jogador.id) }}" class="btn btn-danger me-2"
+                            onclick="return confirm('Remover {{ jogador.nome }} da lista de mensalistas?')">
+                            <i class="fas fa-user-minus"></i> Remover de Mensalista
+                        </a>
+                        {% endif %}
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Configurações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Status Atual -->
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-chart-line"></i> Status Atual</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6>Status</h6>
+                                {% if jogador.mensalista %}
+                                {% if jogador.mensalidade_paga %}
+                                <span class="badge bg-success">MENSALIDADE PAGA</span>
+                                {% else %}
+                                <span class="badge bg-warning">MENSALIDADE PENDENTE</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="badge bg-secondary">NÃO MENSALISTA</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 text-center">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6>Data Início</h6>
+                                <strong>
+                                    {% if jogador.data_inicio_mensalidade %}
+                                    {{ format_date(jogador.data_inicio_mensalidade) }}
+                                    {% else %}
+                                    Não definida
+                                    {% endif %}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 text-center">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6>Data Fim</h6>
+                                <strong>
+                                    {% if jogador.data_fim_mensalidade %}
+                                    {{ format_date(jogador.data_fim_mensalidade) }}
+                                    {% if jogador.data_fim_mensalidade < date.today() %} <br><span
+                                            class="badge bg-danger">VENCIDA</span>
+                                        {% endif %}
+                                        {% else %}
+                                        Não definida
+                                        {% endif %}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // Preencher datas do ciclo atual quando marcado
+        $('#usar_ciclo_atual').change(function () {
+            if (this.checked) {
+                // Verificar se há ciclo atual definido
+                const hoje = new Date();
+
+                {% if ciclo_atual_inicio and ciclo_atual_fim %}
+                // Preencher com as datas do ciclo atual
+                $('#data_inicio_mensalidade').val('{{ ciclo_atual_inicio.strftime("%Y-%m-%d") }}');
+                $('#data_fim_mensalidade').val('{{ ciclo_atual_fim.strftime("%Y-%m-%d") }}');
+
+                // Marcar como mensalista e paga
+                $('#mensalista').prop('checked', true);
+                $('#mensalidade_paga').prop('checked', true);
+                {% else %}
+                // Se não houver ciclo, usar período padrão de 30 dias
+                const dataInicio = hoje.toISOString().split('T')[0];
+                const dataFim = new Date(hoje);
+                dataFim.setDate(dataFim.getDate() + 30);
+                $('#data_inicio_mensalidade').val(dataInicio);
+                $('#data_fim_mensalidade').val(dataFim.toISOString().split('T')[0]);
+
+                // Marcar como mensalista e paga
+                $('#mensalista').prop('checked', true);
+                $('#mensalidade_paga').prop('checked', true);
+
+                alert('⚠️ Nenhum ciclo ativo encontrado. Foi usado o período padrão de 30 dias.');
+                {% endif %}
+            }
+        });
+
+        // Auto-preenche datas quando marcar mensalidade paga
+        $('#mensalidade_paga').change(function () {
+            if (this.checked) {
+                // Se data de início está vazia, preenche com hoje
+                if (!$('#data_inicio_mensalidade').val()) {
+                    const hoje = new Date().toISOString().split('T')[0];
+                    $('#data_inicio_mensalidade').val(hoje);
+                }
+
+                // Se data de fim está vazia, preenche com 30 dias
+                if (!$('#data_fim_mensalidade').val()) {
+                    const hoje = new Date();
+                    const futuro = new Date(hoje);
+                    futuro.setDate(futuro.getDate() + 30);
+                    $('#data_fim_mensalidade').val(futuro.toISOString().split('T')[0]);
+                }
+
+                // Marca automaticamente como mensalista
+                $('#mensalista').prop('checked', true);
+            }
+        });
+    });
+</script>
+{% endblock %}

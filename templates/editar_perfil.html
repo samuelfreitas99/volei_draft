@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Perfil - Sistema de Vôlei{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-edit"></i> Editar Meu Perfil
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Foto de Perfil -->
+                <div class="text-center mb-4">
+                    {% if jogador.foto_perfil %}
+                    <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                         class="img-thumbnail rounded-circle mb-2" 
+                         style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                    <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mb-2" 
+                         style="width: 150px; height: 150px;">
+                        <i class="fas fa-user fa-4x text-white"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                onclick="document.getElementById('foto_perfil').click()">
+                            <i class="fas fa-camera"></i> Alterar Foto
+                        </button>
+                        <input type="file" id="foto_perfil" accept="image/*" 
+                               style="display: none;" onchange="uploadFoto()">
+                        {% if jogador.foto_perfil %}
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFoto()">
+                            <i class="fas fa-trash"></i> Remover Foto
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <form method="POST" action="{{ url_for('editar_perfil') }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nome" class="form-label">
+                                <i class="fas fa-user"></i> Nome Completo *
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ jogador.nome }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="apelido" class="form-label">
+                                <i class="fas fa-signature"></i> Apelido
+                            </label>
+                            <input type="text" class="form-control" id="apelido" name="apelido"
+                                   value="{{ jogador.apelido or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="telefone" class="form-label">
+                                <i class="fas fa-phone"></i> Telefone
+                            </label>
+                            <input type="tel" class="form-control" id="telefone" name="telefone" 
+                                   value="{{ jogador.telefone or '' }}" placeholder="(11) 99999-9999">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="cidade" class="form-label">
+                                <i class="fas fa-city"></i> Cidade
+                            </label>
+                            <input type="text" class="form-control" id="cidade" name="cidade"
+                                   value="{{ jogador.cidade or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="data_nascimento" class="form-label">
+                                <i class="fas fa-birthday-cake"></i> Data de Nascimento
+                            </label>
+                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento"
+                                   value="{{ jogador.data_nascimento.strftime('%Y-%m-%d') if jogador.data_nascimento else '' }}">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="altura" class="form-label">
+                                <i class="fas fa-ruler-vertical"></i> Altura
+                            </label>
+                            <input type="text" class="form-control" id="altura" name="altura"
+                                   value="{{ jogador.altura or '' }}" placeholder="Ex: 1.85m">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="posicao" class="form-label">
+                                <i class="fas fa-bullseye"></i> Posição Principal
+                            </label>
+                            <select class="form-select" id="posicao" name="posicao">
+                                <option value="">Selecione...</option>
+                                <option value="levantador" {% if jogador.posicao == 'levantador' %}selected{% endif %}>Levantador</option>
+                                <option value="ponteiro" {% if jogador.posicao == 'ponteiro' %}selected{% endif %}>Ponteiro</option>
+                                <option value="central" {% if jogador.posicao == 'central' %}selected{% endif %}>Central</option>
+                                <option value="libero" {% if jogador.posicao == 'libero' %}selected{% endif %}>Líbero</option>
+                                <option value="oposto" {% if jogador.posicao == 'oposto' %}selected{% endif %}>Oposto</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="nivel" class="form-label">
+                                <i class="fas fa-chart-line"></i> Nível
+                            </label>
+                            <select class="form-select" id="nivel" name="nivel" required>
+                                <option value="iniciante" {% if jogador.nivel == 'iniciante' %}selected{% endif %}>Iniciante</option>
+                                <option value="intermediario" {% if jogador.nivel == 'intermediario' %}selected{% endif %}>Intermediário</option>
+                                <option value="avancado" {% if jogador.nivel == 'avancado' %}selected{% endif %}>Avançado</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('perfil') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Informações da Conta -->
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-user-circle"></i> Informações da Conta</h6>
+            </div>
+            <div class="card-body">
+                <p><strong>Usuário:</strong> {{ current_user.username }}</p>
+                <p><strong>E-mail:</strong> {{ current_user.email or 'Não informado' }}</p>
+                <p><strong>Tipo de Conta:</strong> {{ current_user.role|title }}</p>
+                <p><strong>Data de Criação:</strong> {{ format_date(current_user.created_at) }}</p>
+                <p><strong>Último Login:</strong> 
+                    {% if current_user.last_login %}
+                        {{ format_date(current_user.last_login, '%d/%m/%Y %H:%M') }}
+                    {% else %}
+                        Nunca
+                    {% endif %}
+                </p>
+                
+                <!-- BOTÃO NOVO: Adicionar aqui -->
+                <hr>
+                <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#modalRedefinirSenha">
+                    <i class="fas fa-key me-2"></i>Redefinir Senha
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal para Redefinir Senha (ADICIONAR DEPOIS DO CARD) -->
+        <div class="modal fade" id="modalRedefinirSenha" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-key me-2"></i>Redefinir Senha
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="formRedefinirSenhaEditar">
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Digite sua senha atual e a nova senha
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="senha_atual_editar" class="form-label">Senha Atual *</label>
+                                <input type="password" class="form-control" id="senha_atual_editar" name="senha_atual" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="nova_senha_editar" class="form-label">Nova Senha *</label>
+                                <input type="password" class="form-control" id="nova_senha_editar" name="nova_senha" required
+                                    minlength="6" placeholder="Mínimo 6 caracteres">
+                                <div class="form-text">A senha deve ter no mínimo 6 caracteres</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="confirmar_senha_editar" class="form-label">Confirmar Nova Senha *</label>
+                                <input type="password" class="form-control" id="confirmar_senha_editar" name="confirmar_senha" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save me-2"></i>Salvar Nova Senha
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+<script>
+function uploadFoto() {
+    const fileInput = document.getElementById('foto_perfil');
+    const file = fileInput.files[0];
+    
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+        alert('Arquivo muito grande! Máximo 2MB.');
+        fileInput.value = '';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('foto', file);
+    
+    fetch('{{ url_for("upload_foto_jogador") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Atualiza a imagem na página
+            const img = document.querySelector('.img-thumbnail') || 
+                       document.querySelector('.rounded-circle.bg-secondary');
+            if (img) {
+                if (img.tagName === 'IMG') {
+                    img.src = data.foto_url + '?t=' + new Date().getTime();
+                } else {
+                    // Substitui o placeholder pela imagem
+                    const newImg = document.createElement('img');
+                    newImg.src = data.foto_url + '?t=' + new Date().getTime();
+                    newImg.className = 'img-thumbnail rounded-circle mb-2';
+                    newImg.style = 'width: 150px; height: 150px; object-fit: cover;';
+                    img.parentNode.replaceChild(newImg, img);
+                }
+            }
+            alert('Foto atualizada com sucesso!');
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao fazer upload da foto.');
+    })
+    .finally(() => {
+        fileInput.value = '';
+    });
+}
+
+function removerFoto() {
+    if (!confirm('Deseja remover sua foto de perfil?')) return;
+    
+    // Envia uma requisição para remover a foto
+    fetch('{{ url_for("upload_foto_jogador") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({remover: true})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Substitui a imagem pelo placeholder
+            const img = document.querySelector('.img-thumbnail');
+            if (img) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center mb-2';
+                placeholder.style = 'width: 150px; height: 150px;';
+                
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-user fa-4x text-white';
+                placeholder.appendChild(icon);
+                
+                img.parentNode.replaceChild(placeholder, img);
+            }
+            alert('Foto removida com sucesso!');
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erro ao remover foto.');
+    });
+}
+
+// Função para redefinir senha
+document.getElementById('formRedefinirSenha')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const senhaAtual = document.getElementById('senha_atual').value;
+    const novaSenha = document.getElementById('nova_senha').value;
+    const confirmarSenha = document.getElementById('confirmar_senha').value;
+    
+    // Validações
+    if (!senhaAtual) {
+        showToast('Digite sua senha atual', 'error');
+        return;
+    }
+    
+    if (novaSenha.length < 6) {
+        showToast('A nova senha deve ter no mínimo 6 caracteres', 'error');
+        return;
+    }
+    
+    if (novaSenha !== confirmarSenha) {
+        showToast('As novas senhas não coincidem', 'error');
+        return;
+    }
+    
+    // Enviar para o backend
+    fetch('{{ url_for("redefinir_senha_usuario") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            senha_atual: senhaAtual,
+            nova_senha: novaSenha,
+            confirmar_senha: confirmarSenha
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Senha redefinida com sucesso!', 'success');
+            // Fechar modal e limpar campos
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalRedefinirSenha'));
+            modal.hide();
+            document.getElementById('formRedefinirSenha').reset();
+        } else {
+            showToast(data.message || 'Senha atual inválida', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Senha atual inválida', 'error');
+    });
+});
+
+// Função showToast (se não existir, adicionar)
+function showToast(message, type) {
+    // Remover toasts existentes
+    document.querySelectorAll('.custom-toast').forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = `custom-toast alert alert-${type} alert-dismissible fade show`;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        border-radius: 10px;
+    `;
+    
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+            <span>${message}</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remover após 5 segundos
+    setTimeout(() => {
+        if (toast.parentNode) {
+            const bsAlert = new bootstrap.Alert(toast);
+            bsAlert.close();
+        }
+    }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const formRedefinirSenha = document.getElementById('formRedefinirSenhaEditar');
+    
+    if (formRedefinirSenha) {
+        formRedefinirSenha.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const senhaAtual = document.getElementById('senha_atual_editar').value;
+            const novaSenha = document.getElementById('nova_senha_editar').value;
+            const confirmarSenha = document.getElementById('confirmar_senha_editar').value;
+            
+            // Validações
+            if (!senhaAtual) {
+                alert('Digite sua senha atual');
+                return;
+            }
+            
+            if (novaSenha.length < 6) {
+                alert('A nova senha deve ter no mínimo 6 caracteres');
+                return;
+            }
+            
+            if (novaSenha !== confirmarSenha) {
+                alert('As novas senhas não coincidem');
+                return;
+            }
+            
+            // Mostrar loading
+            const submitBtn = formRedefinirSenha.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processando...';
+            submitBtn.disabled = true;
+            
+            // Enviar para o backend
+            fetch('/redefinir_senha_usuario', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    senha_atual: senhaAtual,
+                    nova_senha: novaSenha,
+                    confirmar_senha: confirmarSenha
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na resposta do servidor');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Senha redefinida com sucesso!');
+                    // Fechar modal e limpar campos
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalRedefinirSenha'));
+                    if (modal) modal.hide();
+                    formRedefinirSenha.reset();
+                } else {
+                    alert(data.message || 'Senha atual inválida');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Senha atual inválida');
+            })
+            .finally(() => {
+                // Restaurar botão
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    }
+});
+
+</script>
+{% endblock %}

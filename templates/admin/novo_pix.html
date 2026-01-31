@@ -1,0 +1,90 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Nova Chave PIX{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-qrcode"></i> Nova Chave PIX
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('novo_pix') }}">
+                    <div class="mb-3">
+                        <label for="chave_pix" class="form-label">Chave PIX *</label>
+                        <input type="text" class="form-control" id="chave_pix" name="chave_pix" required>
+                        <div class="form-text">Ex: 123.456.789-00, email@exemplo.com, (11) 99999-9999</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tipo_chave" class="form-label">Tipo de Chave *</label>
+                        <select class="form-select" id="tipo_chave" name="tipo_chave" required>
+                            <option value="cpf">CPF/CNPJ</option>
+                            <option value="email">E-mail</option>
+                            <option value="telefone">Telefone</option>
+                            <option value="aleatoria">Chave Aleatória</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nome_recebedor" class="form-label">Nome do Recebedor *</label>
+                            <input type="text" class="form-control" id="nome_recebedor" name="nome_recebedor" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="cidade_recebedor" class="form-label">Cidade do Recebedor</label>
+                            <input type="text" class="form-control" id="cidade_recebedor" name="cidade_recebedor">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição (Opcional)</label>
+                        <input type="text" class="form-control" id="descricao" name="descricao" 
+                               placeholder="Ex: Pagamento mensalidade, Contribuição, etc.">
+                    </div>
+
+                    <!-- NOVO CAMPO: Vincular à Semana -->
+                    <div class="mb-3">
+                        <label for="semana_id" class="form-label">Vincular à Semana</label>
+                        <select class="form-select" id="semana_id" name="semana_id">
+                            <option value="" selected>Todas as semanas</option>
+                            {% for semana in semanas_futuras %}
+                            <option value="{{ semana.id }}">
+                                {{ semana.data.strftime('%d/%m/%Y') }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Deixe em branco para mostrar em todas as semanas</div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_pix') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Salvar Chave PIX
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <h6><i class="fas fa-info-circle"></i> Informações:</h6>
+            <ul class="mb-0">
+                <li>A chave PIX será exibida na página inicial</li>
+                <li>Os usuários poderão clicar para copiar automaticamente</li>
+                <li>É possível ter múltiplas chaves PIX ativas</li>
+                <li>Somente chaves ativas são exibidas</li>
+                <li>Selecione uma semana específica ou deixe para todas as semanas</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

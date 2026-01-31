@@ -1,0 +1,1217 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Configurações Globais{% endblock %}
+
+{% block admin_content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Configurações Principais -->
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-cog"></i> Configurações do Sistema</h5>
+                <span class="badge bg-light text-primary">v{{ config.version if config.version else '1.0' }}</span>
+            </div>
+            
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_configuracoes') }}">
+                    <!-- Seção 1: Dias da Semana -->
+                    <div class="config-section mb-4">
+                        <div class="section-header d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0"><i class="fas fa-calendar-day"></i> Dias de Jogo</h6>
+                            <span class="badge bg-info" id="contador_dias">0 dias selecionados</span>
+                        </div>
+                        <p class="text-muted mb-3">Marque os dias em que há jogo de vôlei:</p>
+                        
+                        <div class="dias-container">
+                            <div class="row g-2">
+                                {% for valor, nome in dias_semana_nomes %}
+                                <div class="col-md-4 col-6">
+                                    <div class="dia-item">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="dias_semana" value="{{ valor }}" 
+                                               id="dia{{ valor }}"
+                                               {% if valor in dias_selecionados %}checked{% endif %}>
+                                        <label class="form-check-label w-100" for="dia{{ valor }}">
+                                            <div class="dia-card {% if valor in dias_selecionados %}selected{% endif %}">
+                                                <div class="dia-icon">
+                                                    {% if valor == 0 %}
+                                                    <i class="fas fa-moon"></i>
+                                                    {% elif valor == 1 %}
+                                                    <i class="fas fa-fire"></i>
+                                                    {% elif valor == 2 %}
+                                                    <i class="fas fa-water"></i>
+                                                    {% elif valor == 3 %}
+                                                    <i class="fas fa-leaf"></i>
+                                                    {% elif valor == 4 %}
+                                                    <i class="fas fa-bolt"></i>
+                                                    {% elif valor == 5 %}
+                                                    <i class="fas fa-star"></i>
+                                                    {% else %}
+                                                    <i class="fas fa-sun"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="dia-name">{{ nome.split('-')[0] }}</div>
+                                                <div class="dia-abbrev">{{ get_dia_semana_curto(valor) }}</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="section-divider">
+                    
+                    <!-- Seção 2: Sistema de Ciclos -->
+                    <div class="config-section mb-4">
+                        <div class="section-header mb-3">
+                            <h6 class="mb-0"><i class="fas fa-calendar-alt"></i> Sistema de Ciclos</h6>
+                        </div>
+                        
+                        {% set ciclo_inicio, ciclo_fim = obter_ciclo_das_configuracoes() %}
+                        {% set hoje = date.today() %}
+                        
+                        <div class="ciclo-info-card {% if ciclo_inicio and ciclo_fim %}active{% else %}inactive{% endif %}">
+                            <div class="ciclo-header">
+                                <div class="ciclo-status">
+                                    {% if ciclo_inicio and ciclo_fim %}
+                                    <span class="status-badge active">
+                                        <i class="fas fa-check-circle"></i> Ciclo Ativo
+                                    </span>
+                                    {% else %}
+                                    <span class="status-badge inactive">
+                                        <i class="fas fa-exclamation-circle"></i> Sem Ciclo Ativo
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="ciclo-actions">
+                                    <a href="{{ url_for('admin_ciclos') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-cog"></i> Gerenciar
+                                    </a>
+                                    <a href="{{ url_for('definir_ciclo_mensalidade') }}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-plus"></i> Criar
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            {% if ciclo_inicio and ciclo_fim %}
+                            <div class="ciclo-body">
+                                <div class="ciclo-dates">
+                                    <div class="date-item">
+                                        <div class="date-label">Início</div>
+                                        <div class="date-value">{{ format_date(ciclo_inicio) }}</div>
+                                    </div>
+                                    <div class="date-arrow">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </div>
+                                    <div class="date-item">
+                                        <div class="date-label">Término</div>
+                                        <div class="date-value">{{ format_date(ciclo_fim) }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="ciclo-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value">{{ (ciclo_fim - ciclo_inicio).days + 1 }}</div>
+                                        <div class="stat-label">Dias totais</div>
+                                    </div>
+                                    <div class="stat-divider"></div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">
+                                            {% if hoje >= ciclo_inicio and hoje <= ciclo_fim %}
+                                                {{ (ciclo_fim - hoje).days + 1 }}
+                                            {% elif hoje < ciclo_inicio %}
+                                                {{ (ciclo_fim - ciclo_inicio).days + 1 }}
+                                            {% else %}
+                                                0
+                                            {% endif %}
+                                        </div>
+                                        <div class="stat-label">Dias restantes</div>
+                                    </div>
+                                    <div class="stat-divider"></div>
+                                    <div class="stat-item">
+                                        <div class="stat-value">
+                                            {% set jogadores_no_ciclo = obter_jogadores_no_ciclo_atual() %}
+                                            {{ jogadores_no_ciclo|length }}
+                                        </div>
+                                        <div class="stat-label">Mensalistas</div>
+                                    </div>
+                                </div>
+                                
+                                {% if hoje > ciclo_fim %}
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Este ciclo já terminou. Crie um novo ciclo ativo.
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="ciclo-body">
+                                <div class="empty-ciclo">
+                                    <i class="fas fa-calendar-times fa-2x text-muted"></i>
+                                    <p class="mt-2 mb-0">Nenhum ciclo ativo definido.</p>
+                                    <small class="text-muted">Configure um ciclo para gerenciar mensalidades.</small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr class="section-divider">
+                    
+                    <!-- Seção 3: Duração Padrão -->
+                    <div class="config-section mb-4">
+                        <div class="section-header mb-3">
+                            <h6 class="mb-0"><i class="fas fa-clock"></i> Duração Padrão da Mensalidade</h6>
+                        </div>
+                        
+                        <div class="duration-input">
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="duracao_mensalidade" 
+                                       name="duracao_mensalidade" 
+                                       value="{{ config.duracao_mensalidade_dias }}"
+                                       min="7" max="90" required>
+                                <span class="input-group-text">dias</span>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle"></i>
+                                Usado como padrão quando não há ciclo ativo específico.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="section-divider">
+                    
+                    <!-- Seção 4: Senha para Visitantes 
+                    <div class="config-section mb-4">
+                        <div class="section-header mb-3">
+                            <h6 class="mb-0"><i class="fas fa-key"></i> Acesso para Visitantes</h6>
+                        </div>
+                        
+                        <div class="password-input">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="text" class="form-control" id="senha_visitante" 
+                                       name="senha_visitante" value="{{ config.senha_visitante }}"
+                                       placeholder="Digite a senha para visitantes" required>
+                                <button class="btn btn-outline-secondary" type="button" id="generatePassword">
+                                    <i class="fas fa-redo"></i> Gerar
+                                </button>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle"></i>
+                                Senha que os visitantes usam para confirmar presença na página inicial.
+                            </div>
+                        </div>
+                    </div> -->
+                    
+                    <hr class="section-divider">
+                    
+                    <!-- Botões de Ação -->
+                    <div class="action-buttons">
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> Salvar Configurações
+                            </button>
+                            <a href="{{ url_for('limpar_config_dias') }}" class="btn btn-outline-warning btn-lg">
+                                <i class="fas fa-broom"></i> Limpar Dias
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Painel de Controle -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-tachometer-alt"></i> Painel de Controle</h5>
+                <span class="badge bg-light text-info">Status</span>
+            </div>
+            <div class="card-body">
+                <!-- Estatísticas Rápidas -->
+                <div class="stats-grid mb-4">
+                    <div class="stat-card stat-primary">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">{{ total_jogadores }}</div>
+                            <div class="stat-label">Jogadores</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-warning">
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">{{ total_mensalistas }}</div>
+                            <div class="stat-label">Mensalistas</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-success">
+                        <div class="stat-icon">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">{{ total_capitaes }}</div>
+                            <div class="stat-label">Capitães</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-info">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">{{ total_semanas }}</div>
+                            <div class="stat-label">Semanas Futuras</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estatísticas Adicionais -->
+                <div class="additional-stats">
+                    <div class="row g-2">
+                        {% if semanas_no_ciclo > 0 %}
+                        <div class="col-6">
+                            <div class="stat-small">
+                                <div class="stat-small-value">{{ semanas_no_ciclo }}</div>
+                                <div class="stat-small-label">Semanas no ciclo</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if dias_restantes_ciclo > 0 %}
+                        <div class="col-6">
+                            <div class="stat-small">
+                                <div class="stat-small-value text-success">{{ dias_restantes_ciclo }}</div>
+                                <div class="stat-small-label">Dias restantes</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Detalhamento de semanas -->
+                <div class="mt-3">
+                    <h6 class="border-bottom pb-2 mb-2">Distribuição de Semanas</h6>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="week-distribution">
+                                <div class="week-item">
+                                    <span class="week-dot" style="background-color: #0dcaf0;"></span>
+                                    <span class="week-label">Semanas futuras:</span>
+                                    <span class="week-value">{{ total_semanas }}</span>
+                                </div>
+                                {% if semanas_no_ciclo > 0 %}
+                                <div class="week-item">
+                                    <span class="week-dot" style="background-color: #198754;"></span>
+                                    <span class="week-label">Dentro do ciclo:</span>
+                                    <span class="week-value">{{ semanas_no_ciclo }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="week-item">
+                                    <span class="week-dot" style="background-color: #6c757d;"></span>
+                                    <span class="week-label">Exibidas abaixo:</span>
+                                    <span class="week-value">{{ semanas_futuras|length }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if ciclo_existe and ciclo_inicio and ciclo_fim %}
+                            <div class="alert alert-sm alert-success">
+                                <small>
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <strong>Ciclo ativo:</strong> 
+                                    {{ format_date(ciclo_inicio) }} a {{ format_date(ciclo_fim) }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gestão de Semanas -->
+                <div class="card mb-3 mt-3">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-calendar-week"></i> Gestão de Semanas</h6>
+                        <small>Mostrando {{ semanas_futuras|length }} de {{ total_semanas }} semanas</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <!-- Botão para criar semana manual -->
+                            <button type="button" class="btn btn-outline-primary w-100 mb-2"
+                                    data-bs-toggle="modal" data-bs-target="#modalCriarSemana">
+                                <i class="fas fa-plus-circle"></i> Criar Semana Manual
+                            </button>
+                            
+                            <!-- Botão para limpar semanas fora do ciclo -->
+                            {% if ciclo_existe and ciclo_inicio and ciclo_fim %}
+                            <a href="{{ url_for('limpar_semanas_fora_ciclo') }}" 
+                            class="btn btn-outline-danger w-100 mb-2"
+                            onclick="return confirmLimparSemanas()">
+                                <i class="fas fa-trash-alt"></i> Limpar Semanas Fora do Ciclo
+                            </a>
+                            
+                            <div class="alert alert-info mt-2">
+                                <small>
+                                    <i class="fas fa-info-circle"></i>
+                                    Semanas são criadas automaticamente apenas dentro do ciclo ativo.
+                                    Este botão remove semanas criadas após {{ format_date(ciclo_fim) }}
+                                </small>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <small>
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Nenhum ciclo ativo definido. Defina um ciclo para usar esta funcionalidade.
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Lista de semanas existentes -->
+                        <h6 class="border-bottom pb-2">Próximas Semanas</h6>
+                        <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                            {% for semana in semanas_futuras %}
+                            <a href="{{ url_for('admin_dashboard', semana_id=semana.id) }}" 
+                            class="list-group-item list-group-item-action semana-item">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ format_date(semana.data) }}</strong>
+                                        <small class="d-block text-muted">{{ get_dia_semana(semana.data.weekday()) }}</small>
+                                        {% if ciclo_fim and semana.data > ciclo_fim %}
+                                        <span class="badge bg-danger mt-1">Fora do ciclo</span>
+                                        {% elif ciclo_inicio and semana.data < ciclo_inicio %}
+                                        <span class="badge bg-warning mt-1">Antes do ciclo</span>
+                                        {% elif ciclo_inicio and ciclo_fim and ciclo_inicio <= semana.data <= ciclo_fim %}
+                                        <span class="badge bg-success mt-1">No ciclo</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        {% if semana.draft_em_andamento %}
+                                        <span class="badge bg-primary">Draft</span>
+                                        {% elif semana.draft_finalizado %}
+                                        <span class="badge bg-dark">Finalizado</span>
+                                        {% elif semana.lista_aberta %}
+                                        <span class="badge bg-success">Aberta</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Fechada</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if not semanas_futuras %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-calendar-times fa-2x text-muted"></i>
+                            <p class="mt-2 mb-0 text-muted">Nenhuma semana futura</p>
+                            <small class="text-muted">Configure os dias de jogo e salve as configurações</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Ações Rápidas -->
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-bolt"></i> Ações Rápidas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('admin_mensalidades') }}" class="btn btn-outline-success">
+                                <i class="fas fa-money-bill-wave"></i> Mensalidades
+                            </a>
+                            <a href="{{ url_for('admin_ciclos') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-calendar-alt"></i> Ciclos
+                            </a>
+                            <a href="{{ url_for('admin_todas_semanas') }}" class="btn btn-outline-info">
+                                <i class="fas fa-list"></i> Todas as Semanas
+                            </a>
+                            <a href="{{ url_for('admin_jogadores') }}" class="btn btn-outline-warning">
+                                <i class="fas fa-users"></i> Jogadores
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Criar Semana Manual -->
+<div class="modal fade" id="modalCriarSemana" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-calendar-plus"></i> Criar Semana Manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('criar_semana_manual') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="data_semana" class="form-label">Data do Jogo</label>
+                        <input type="date" class="form-control" id="data_semana" name="data_semana"
+                               min="{{ date.today().strftime('%Y-%m-%d') }}"
+                               value="{{ date.today().strftime('%Y-%m-%d') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição (opcional)</label>
+                        <input type="text" class="form-control" id="descricao" name="descricao"
+                               placeholder="Ex: Jogo de Vôlei - Time Especial">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar Semana</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Informações -->
+<div class="modal fade" id="modalInfo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-info-circle"></i> Informações do Sistema</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-sync-alt"></i> Sobre os Ciclos:</h6>
+                    <p class="mb-2">• As semanas são criadas automaticamente apenas dentro do ciclo ativo</p>
+                    <p class="mb-2">• Use "Limpar Fora do Ciclo" para remover semanas além da data final</p>
+                    <p class="mb-0">• Cada semana pode ser gerenciada individualmente</p>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Importante:</h6>
+                    <p class="mb-0">Salve as configurações para aplicar as mudanças e criar semanas automaticamente.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-info" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Atualiza contador de dias
+    function atualizarContadorDias() {
+        var count = $('input[name="dias_semana"]:checked').length;
+        $('#contador_dias').text(count + ' dia' + (count !== 1 ? 's' : '') + ' selecionado' + (count !== 1 ? 's' : ''));
+        
+        // Atualiza visual dos cards
+        $('.dia-card').removeClass('selected');
+        $('input[name="dias_semana"]:checked').each(function() {
+            $(this).closest('.dia-card').addClass('selected');
+        });
+    }
+    
+    // Validação do formulário
+    $('form').submit(function(e) {
+        var diasSelecionados = $('input[name="dias_semana"]:checked').length;
+        if (diasSelecionados === 0) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Dias de Jogo',
+                text: 'Selecione pelo menos um dia da semana para vôlei!',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#0d6efd'
+            });
+            return false;
+        }
+        
+        var duracao = parseInt($('#duracao_mensalidade').val());
+        if (duracao < 7 || duracao > 90) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Duração Inválida',
+                text: 'A duração da mensalidade deve ser entre 7 e 90 dias!',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#0d6efd'
+            });
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Gerador de senha
+    $('#generatePassword').click(function() {
+        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        var password = '';
+        for (var i = 0; i < 8; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        $('#senha_visitante').val(password);
+        
+        // Feedback visual
+        $(this).html('<i class="fas fa-check"></i> Gerado');
+        setTimeout(() => {
+            $(this).html('<i class="fas fa-redo"></i> Gerar');
+        }, 1500);
+    });
+    
+    // Inicialização
+    atualizarContadorDias();
+    $('input[name="dias_semana"]').change(atualizarContadorDias);
+    
+    // Tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Modal de informações
+    $('#btnInfo').click(function() {
+        $('#modalInfo').modal('show');
+    });
+    
+    // Animação dos cards de dias
+    $('.dia-card').hover(
+        function() {
+            $(this).addClass('hover');
+        },
+        function() {
+            $(this).removeClass('hover');
+        }
+    );
+});
+
+// Confirmação para limpar semanas
+function confirmLimparSemanas() {
+    {% if ciclo_inicio and ciclo_fim %}
+    return Swal.fire({
+        title: 'Limpar Semanas Fora do Ciclo',
+        html: `
+            <div class="text-start">
+                <p>Tem certeza que deseja remover semanas criadas após <strong>{{ format_date(ciclo_fim) }}</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Esta ação é irreversível! Serão removidas apenas semanas <strong>futuras</strong> após o fim do ciclo.
+                </div>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, limpar semanas',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        return result.isConfirmed;
+    });
+    {% endif %}
+    return false;
+}
+
+// Botão de recriar semanas (adicione ao template se quiser)
+$('#btnRecriarSemanas').click(function() {
+    Swal.fire({
+        title: 'Recriar Semanas Automaticamente',
+        html: `
+            <p>Deseja recriar semanas automaticamente baseado na configuração atual?</p>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                As semanas serão criadas apenas dentro do ciclo ativo.
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, recriar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d6efd'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Chama uma rota para recriar semanas (você precisa criar esta rota)
+            window.location.href = "{{ url_for('recriar_semanas_automaticas') }}";
+        }
+    });
+});
+
+// Validação ao salvar configurações
+$('form').submit(function(e) {
+    var diasSelecionados = $('input[name="dias_semana"]:checked').length;
+    if (diasSelecionados === 0) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'warning',
+            title: 'Dias de Jogo',
+            text: 'Selecione pelo menos um dia da semana para vôlei!',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#0d6efd'
+        });
+        return false;
+    }
+    
+    var duracao = parseInt($('#duracao_mensalidade').val());
+    if (duracao < 7 || duracao > 90) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Duração Inválida',
+            text: 'A duração da mensalidade deve ser entre 7 e 90 dias!',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#0d6efd'
+        });
+        return false;
+    }
+    
+    // Mostra confirmação informativa
+    {% if ciclo_existe and ciclo_inicio and ciclo_fim and dias_restantes_ciclo > 0 %}
+    e.preventDefault();
+    
+    var diasSelecionadosNomes = [];
+    $('input[name="dias_semana"]:checked').each(function() {
+        var diaNum = parseInt($(this).val());
+        var diaNome = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][diaNum];
+        diasSelecionadosNomes.push(diaNome);
+    });
+    
+    Swal.fire({
+        title: 'Salvar Configurações',
+        html: `
+            <div class="text-start">
+                <p><strong>Você está prestes a:</strong></p>
+                <ol>
+                    <li>Salvar as configurações do sistema</li>
+                    <li>Criar semanas automaticamente para os <strong>{{ dias_restantes_ciclo }} dias restantes</strong> do ciclo</li>
+                    <li>Semanas serão criadas apenas nas: <strong>${diasSelecionadosNomes.join(', ')}</strong></li>
+                </ol>
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle"></i>
+                    Semanas fora do ciclo (após {{ format_date(ciclo_fim) }}) serão removidas automaticamente.
+                </div>
+            </div>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, salvar e criar semanas',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        width: 600
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $(this).off('submit').submit();
+        }
+    });
+    {% endif %}
+    
+    return true;
+});
+
+
+// Tooltips para estatísticas
+$(document).ready(function() {
+    // Tooltip para estatística de semanas
+    $('.stat-card.stat-info').attr('title', 'Total de semanas futuras (a partir de hoje)').tooltip();
+    
+    // Tooltip para semanas no ciclo
+    $('.stat-small-value.text-success').closest('.stat-small').attr('title', 'Dias restantes no ciclo atual').tooltip();
+    
+    // Mostrar detalhes ao passar o mouse sobre semanas
+    $('.semana-item').hover(
+        function() {
+            var $this = $(this);
+            var data = $this.find('strong').text();
+            var dia = $this.find('small').text();
+            var badges = [];
+            $this.find('.badge').each(function() {
+                badges.push($(this).text());
+            });
+            
+            // Cria tooltip personalizado
+            $this.attr('title', `${data} (${dia})\nStatus: ${badges.join(', ')}`);
+            $this.tooltip('show');
+        },
+        function() {
+            $(this).tooltip('hide').removeAttr('title');
+        }
+    );
+    
+    // Atualiza contador de semanas na lista
+    function updateWeekCounters() {
+        var totalWeeks = {{ total_semanas }};
+        var shownWeeks = {{ semanas_futuras|length }};
+        var inCycle = {{ semanas_no_ciclo }};
+        
+        console.log(`📊 Estatísticas de semanas:`);
+        console.log(`   - Total futuras: ${totalWeeks}`);
+        console.log(`   - Mostrando: ${shownWeeks}`);
+        console.log(`   - No ciclo: ${inCycle}`);
+    }
+    
+    updateWeekCounters();
+});
+</script>
+
+<style>
+
+/* Estilo para barra de progresso do ciclo */
+.ciclo-progress .progress {
+    border-radius: 5px;
+    background-color: #e9ecef;
+}
+
+.ciclo-progress .progress-bar {
+    border-radius: 5px;
+    transition: width 0.6s ease;
+}
+
+/* Estilo para informações de semanas */
+.ciclo-info-card .alert-info {
+    background-color: #e7f3ff;
+    border-color: #b6d4fe;
+    color: #084298;
+}
+
+.ciclo-info-card .alert-info i {
+    color: #084298;
+}
+
+/* Badge para dias da semana */
+.badge.bg-secondary {
+    margin-right: 2px;
+    margin-bottom: 2px;
+}    
+/* Estilos das seções */
+.config-section {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #0d6efd;
+}
+
+.section-header {
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.section-divider {
+    border: 1px dashed #dee2e6;
+    margin: 1.5rem 0;
+}
+
+/* Cards de dias */
+.dias-container {
+    margin: 1rem 0;
+}
+
+.dia-item {
+    margin-bottom: 0.5rem;
+}
+
+.dia-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.dia-card:hover {
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.dia-card.selected {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+.dia-card.hover {
+    border-color: #0d6efd;
+}
+
+.dia-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+}
+
+.dia-card.selected .dia-icon {
+    color: #0d6efd;
+}
+
+.dia-name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.dia-abbrev {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Ciclo Info Card */
+.ciclo-info-card {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ciclo-info-card.active {
+    border-color: #198754;
+}
+
+.ciclo-info-card.inactive {
+    border-color: #6c757d;
+}
+
+.ciclo-header {
+    background: #f8f9fa;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-badge.inactive {
+    background: #e2e3e5;
+    color: #41464b;
+}
+
+.ciclo-body {
+    padding: 1.5rem;
+    background: white;
+}
+
+.ciclo-dates {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.date-item {
+    text-align: center;
+    flex: 1;
+}
+
+.date-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.date-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #212529;
+}
+
+.date-arrow {
+    color: #6c757d;
+    padding: 0 1rem;
+}
+
+.ciclo-stats {
+    display: flex;
+    justify-content: space-around;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0d6efd;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.stat-divider {
+    width: 1px;
+    background: #dee2e6;
+}
+
+.empty-ciclo {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+/* Painel de Controle */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.stat-card.stat-primary {
+    border-left: 4px solid #0d6efd;
+}
+
+.stat-card.stat-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.stat-card.stat-success {
+    border-left: 4px solid #198754;
+}
+
+.stat-card.stat-info {
+    border-left: 4px solid #0dcaf0;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #f8f9fa;
+}
+
+.stat-card.stat-primary .stat-icon {
+    color: #0d6efd;
+    background: #e3f2fd;
+}
+
+.stat-card.stat-warning .stat-icon {
+    color: #ffc107;
+    background: #fff3cd;
+}
+
+.stat-card.stat-success .stat-icon {
+    color: #198754;
+    background: #d1e7dd;
+}
+
+.stat-card.stat-info .stat-icon {
+    color: #0dcaf0;
+    background: #cff4fc;
+}
+
+.stat-number {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Lista de semanas */
+.semana-item {
+    border-left: 3px solid #dee2e6;
+    transition: all 0.2s ease;
+}
+
+.semana-item:hover {
+    border-left-color: #0d6efd;
+    background-color: #f8f9fa;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .dias-container .row {
+        justify-content: center;
+    }
+    
+    .ciclo-dates {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .date-arrow {
+        transform: rotate(90deg);
+        padding: 0.5rem 0;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Inputs estilizados */
+.duration-input .input-group,
+.password-input .input-group {
+    max-width: 300px;
+}
+
+.password-input #generatePassword {
+    transition: all 0.3s ease;
+}
+
+.password-input #generatePassword:hover {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+/* Botões de ação */
+.action-buttons .btn {
+    min-width: 200px;
+}
+
+.action-buttons .btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+}
+
+
+/* Estilos para estatísticas adicionais */
+.additional-stats {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.stat-small {
+    text-align: center;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.stat-small-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0d6efd;
+    line-height: 1;
+}
+
+.stat-small-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Distribuição de semanas */
+.week-distribution {
+    padding: 0.5rem;
+}
+
+.week-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #f1f1f1;
+}
+
+.week-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.week-label {
+    flex: 1;
+    font-size: 0.875rem;
+    color: #495057;
+}
+
+.week-value {
+    font-weight: 600;
+    color: #212529;
+    min-width: 30px;
+    text-align: right;
+}
+
+/* Alert pequeno */
+.alert-sm {
+    padding: 0.5rem;
+    margin-bottom: 0;
+}
+
+.alert-sm small {
+    font-size: 0.8rem;
+}
+
+/* Badges para status de semanas */
+.badge.bg-danger, .badge.bg-warning, .badge.bg-success {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .additional-stats .row {
+        flex-direction: column;
+    }
+    
+    .additional-stats .col-6 {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+</style>
+{% endblock %}

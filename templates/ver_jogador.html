@@ -1,0 +1,709 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil de {{ jogador.nome }} - Sistema de Vôlei{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+    
+    .profile-avatar {
+        width: 180px;
+        height: 180px;
+        border: 6px solid white;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        transition: transform 0.3s ease;
+        object-fit: cover;
+    }
+    
+    .profile-avatar:hover {
+        transform: scale(1.05);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .badge-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .skill-bar {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .skill-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #2c3e50 0%, #3498db 100%);
+        border-radius: 4px;
+        transition: width 1s ease-in-out;
+    }
+    
+    .back-btn {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .back-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(44, 62, 80, 0.4);
+        color: white;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .stat-item {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-item:hover {
+        background: #e9ecef;
+        transform: translateY(-3px);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .presence-chart {
+        height: 200px;
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+    
+    .chart-bar {
+        flex: 1;
+        background: linear-gradient(to top, #3498db, #2c3e50);
+        border-radius: 5px 5px 0 0;
+        position: relative;
+        min-height: 10px;
+    }
+    
+    .chart-bar-label {
+        position: absolute;
+        bottom: -25px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    @media (max-width: 768px) {
+        .profile-header {
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .profile-avatar {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+        }
+        
+        .info-item {
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+        
+        .info-icon {
+            margin-bottom: 10px;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    /* Animation for stats cards */
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animated-card {
+        animation: slideUp 0.5s ease forwards;
+        opacity: 0;
+    }
+    
+    .animated-card:nth-child(1) { animation-delay: 0.1s; }
+    .animated-card:nth-child(2) { animation-delay: 0.2s; }
+    .animated-card:nth-child(3) { animation-delay: 0.3s; }
+    .animated-card:nth-child(4) { animation-delay: 0.4s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-md-3 text-center">
+                {% if jogador.foto_perfil %}
+                <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                     class="profile-avatar rounded-circle">
+                {% else %}
+                <div class="profile-avatar rounded-circle bg-white d-flex align-items-center justify-content-center mx-auto">
+                    <i class="fas fa-user fa-4x text-primary"></i>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-9">
+                <h1 class="display-5 fw-bold mb-2">
+                    {{ jogador.nome }}
+                    {% if jogador.apelido %}
+                    <span class="text-light fs-4 fw-normal">"{{ jogador.apelido }}"</span>
+                    {% endif %}
+                </h1>
+                
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                    {% if jogador.mensalista %}
+                    <div class="d-flex align-items-center">
+                        <div class="badge-icon bg-success">
+                            <i class="fas fa-star text-white"></i>
+                        </div>
+                        <span class="text-white">Mensalista</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if jogador.capitao %}
+                    <div class="d-flex align-items-center">
+                        <div class="badge-icon bg-warning">
+                            <i class="fas fa-crown text-white"></i>
+                        </div>
+                        <span class="text-white">Capitão</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if jogador.posicao %}
+                    <div class="d-flex align-items-center">
+                        <div class="badge-icon bg-info">
+                            <i class="fas fa-volleyball-ball text-white"></i>
+                        </div>
+                        <span class="text-white">{{ get_posicao_display(jogador.posicao) }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Botão Voltar -->
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}" class="back-btn btn-sm">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                    </a>
+                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                    <a href="{{ url_for('admin_jogadores') }}" class="btn btn-sm btn-outline-light ms-2">
+                        <i class="fas fa-cogs me-2"></i>Gerenciar Jogadores
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="row g-4">
+        <!-- Left Column - Personal Info -->
+        <div class="col-lg-8">
+            <!-- Personal Information -->
+            <div class="stats-card animated-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0"><i class="fas fa-id-card text-primary me-2"></i>Informações Pessoais</h4>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Telefone</div>
+                                <div class="fw-bold">{{ jogador.telefone or 'Não informado' }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-city"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Cidade</div>
+                                <div class="fw-bold">{{ jogador.cidade or 'Não informado' }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-ruler-vertical"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Altura</div>
+                                <div class="fw-bold">{{ jogador.altura or 'Não informada' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-birthday-cake"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Idade</div>
+                                <div class="fw-bold">
+                                    {% if jogador.data_nascimento %}
+                                        {{ calcular_idade(jogador.data_nascimento) }} anos
+                                    {% else %}
+                                        Não informada
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Nível</div>
+                                <div class="fw-bold">
+                                    <span class="badge {% if jogador.nivel == 'iniciante' %}bg-info{% elif jogador.nivel == 'intermediario' %}bg-primary{% else %}bg-warning text-dark{% endif %} p-2">
+                                        {{ get_nivel_display(jogador.nivel) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Desde</div>
+                                <div class="fw-bold">{{ format_date(jogador.data_cadastro, '%d/%m/%Y') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Player Statistics -->
+            {% if historico and historico|length > 0 %}
+            <div class="stats-card animated-card">
+                <h4 class="mb-4"><i class="fas fa-chart-bar text-success me-2"></i>Estatísticas do Jogador</h4>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ historico|length }}</div>
+                        <div class="stat-label">Partidas</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {{ historico|selectattr('confirmado')|list|length }}
+                        </div>
+                        <div class="stat-label">Confirmado</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {{ historico|selectattr('presente')|list|length }}
+                        </div>
+                        <div class="stat-label">Presente</div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {% set presentes = historico|selectattr('presente')|list|length %}
+                            {% if historico|length > 0 %}
+                                {{ ((presentes / historico|length) * 100)|round|int }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <div class="stat-label">Presença</div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="mt-4">
+                    <h5 class="mb-3"><i class="fas fa-history text-primary me-2"></i>Atividade Recente</h5>
+                    <div class="list-group">
+                        {% for registro in historico[:3] %}
+                        <div class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ format_date(registro.data, '%d/%m/%Y') }}</h6>
+                                    <p class="text-muted mb-0">{{ format_date(registro.data, '%A') }}</p>
+                                </div>
+                                <div>
+                                    {% if registro.confirmado %}
+                                    <span class="badge bg-success p-2">
+                                        <i class="fas fa-check-circle me-1"></i>Confirmado
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger p-2">
+                                        <i class="fas fa-times-circle me-1"></i>Não Confirmado
+                                    </span>
+                                    {% endif %}
+                                    
+                                    {% if registro.presente %}
+                                    <span class="badge bg-primary p-2 ms-1">
+                                        <i class="fas fa-user-check me-1"></i>Presente
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% elif historico %}
+            <!-- Empty statistics -->
+            <div class="stats-card animated-card">
+                <h4 class="mb-4"><i class="fas fa-chart-bar text-success me-2"></i>Estatísticas do Jogador</h4>
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Nenhuma estatística disponível para este jogador.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Additional Info & Actions -->
+        <div class="col-lg-4">
+            <!-- Player Status -->
+            <div class="stats-card animated-card">
+                <h5 class="mb-3"><i class="fas fa-info-circle text-info me-2"></i>Status do Jogador</h5>
+                
+                <div class="mb-3">
+                    <div class="text-muted small">Status</div>
+                    <div class="fw-bold">
+                        {% if jogador.ativo %}
+                        <span class="badge bg-success p-2">
+                            <i class="fas fa-check-circle me-1"></i>Ativo
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger p-2">
+                            <i class="fas fa-times-circle me-1"></i>Inativo
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if jogador.mensalista %}
+                <div class="mb-3">
+                    <div class="text-muted small">Mensalidade</div>
+                    <div class="fw-bold">
+                        {% if jogador.mensalidade_paga %}
+                        <span class="badge bg-success p-2">
+                            <i class="fas fa-check me-1"></i>Paga
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning p-2">
+                            <i class="fas fa-clock me-1"></i>Pendente
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if jogador.data_fim_mensalidade %}
+                <div class="mb-3">
+                    <div class="text-muted small">Vencimento</div>
+                    <div class="fw-bold">
+                        {{ format_date(jogador.data_fim_mensalidade, '%d/%m/%Y') }}
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+                
+                <div class="mb-3">
+                    <div class="text-muted small">Última Atualização</div>
+                    <div class="fw-bold">
+                        {{ format_date(jogador.data_cadastro, '%d/%m/%Y') }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Actions -->
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}
+            <div class="stats-card animated-card">
+                <h5 class="mb-3"><i class="fas fa-cogs text-danger me-2"></i>Ações Administrativas</h5>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('gerenciar_mensalidade', id=jogador.id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-money-bill-wave me-2"></i>Gerenciar Mensalidade
+                    </a>
+                    
+                    <a href="{{ url_for('editar_jogador', id=jogador.id) }}" 
+                       class="btn btn-outline-warning">
+                        <i class="fas fa-edit me-2"></i>Editar Jogador
+                    </a>
+                    
+                    {% if jogador.ativo %}
+                    <a href="{{ url_for('inativar_jogador', id=jogador.id) }}" 
+                       class="btn btn-outline-danger"
+                       onclick="return confirm('Tem certeza que deseja inativar {{ jogador.nome }}?')">
+                        <i class="fas fa-user-slash me-2"></i>Inativar Jogador
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('reativar_jogador', id=jogador.id) }}" 
+                       class="btn btn-outline-success"
+                       onclick="return confirm('Tem certeza que deseja reativar {{ jogador.nome }}?')">
+                        <i class="fas fa-user-check me-2"></i>Reativar Jogador
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Share Profile -->
+            <div class="stats-card animated-card">
+                <h5 class="mb-3"><i class="fas fa-share-alt text-primary me-2"></i>Compartilhar</h5>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="#" class="text-primary fs-4" title="Compartilhar no Facebook">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                    <a href="#" class="text-info fs-4" title="Compartilhar no Twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" class="text-success fs-4" title="Compartilhar no WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                    <a href="#" class="text-dark fs-4" title="Copiar Link">
+                        <i class="fas fa-link"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Back to Top Button -->
+            <div class="stats-card animated-card text-center">
+                <button class="btn btn-link text-decoration-none" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                    <i class="fas fa-arrow-up me-2"></i>Voltar ao Topo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate skill bars on scroll
+        const observerOptions = {
+            threshold: 0.5
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const progressBars = entry.target.querySelectorAll('.skill-progress');
+                    progressBars.forEach(bar => {
+                        const width = bar.style.width;
+                        bar.style.width = '0';
+                        setTimeout(() => {
+                            bar.style.width = width;
+                        }, 300);
+                    });
+                }
+            });
+        }, observerOptions);
+        
+        // Observe all stats cards
+        document.querySelectorAll('.stats-card').forEach(card => {
+            observer.observe(card);
+        });
+        
+        // Copy profile link functionality
+        const copyLinkBtn = document.querySelector('[title="Copiar Link"]');
+        if (copyLinkBtn) {
+            copyLinkBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const currentUrl = window.location.href;
+                
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    // Show toast notification
+                    showToast('Link copiado para a área de transferência!', 'success');
+                }).catch(err => {
+                    console.error('Erro ao copiar link: ', err);
+                    showToast('Erro ao copiar link', 'error');
+                });
+            });
+        }
+        
+        // Social sharing buttons (basic implementation)
+        const shareButtons = document.querySelectorAll('[title^="Compartilhar"]');
+        shareButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const platform = this.title.replace('Compartilhar no ', '');
+                const url = window.location.href;
+                const title = 'Perfil de {{ jogador.nome }} - Sistema de Vôlei';
+                
+                let shareUrl = '';
+                switch(platform) {
+                    case 'Facebook':
+                        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                        break;
+                    case 'Twitter':
+                        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`;
+                        break;
+                    case 'WhatsApp':
+                        shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(title + ' ' + url)}`;
+                        break;
+                }
+                
+                if (shareUrl) {
+                    window.open(shareUrl, '_blank', 'width=600,height=400');
+                }
+            });
+        });
+    });
+    
+    function showToast(message, type) {
+        // Remove existing toasts
+        document.querySelectorAll('.custom-toast').forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `custom-toast alert alert-${type} alert-dismissible fade show`;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-radius: 10px;
+        `;
+        
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                <span>${message}</span>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                const bsAlert = new bootstrap.Alert(toast);
+                bsAlert.close();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

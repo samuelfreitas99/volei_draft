@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{% block admin_title %}Admin{% endblock %} - Sistema de Vôlei{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row g-0">
+        <!-- Conteúdo Admin Completo -->
+        <div class="col-12">
+            {% block admin_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<!-- Scripts específicos do admin -->
+<script>
+    // Adicionar classe específica para admin no body
+    document.body.classList.add('admin-page');
+    
+    // Prevenir conflitos com dropdowns
+    $(document).ready(function() {
+        // Garantir que dropdowns admin tenham prioridade
+        $('.admin-main-nav .dropdown-toggle').on('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        // Prevenir fechamento ao clicar dentro do dropdown
+        $('.admin-main-nav .dropdown-menu').on('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+</script>
+{% endblock %}

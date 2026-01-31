@@ -1,0 +1,83 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Debug - Ciclo de Mensalidades{% endblock %}
+
+{% block admin_content %}
+<div class="container">
+    <h2>Debug - Ciclo de Mensalidades</h2>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5>Informações do Ciclo</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Função obter_ciclo_atual_mensalidade():</strong></p>
+                    <ul>
+                        <li>Início: {{ ciclo_inicio|format_date if ciclo_inicio else 'Nenhum' }}</li>
+                        <li>Fim: {{ ciclo_fim|format_date if ciclo_fim else 'Nenhum' }}</li>
+                        <li>Jogadores no ciclo: {{ no_ciclo }}</li>
+                    </ul>
+                    
+                    <p><strong>Função obter_ciclo_das_configuracoes():</strong></p>
+                    <ul>
+                        <li>Início: {{ config_inicio|format_date if config_inicio else 'Nenhum' }}</li>
+                        <li>Fim: {{ config_fim|format_date if config_fim else 'Nenhum' }}</li>
+                        <li>Duração: {{ (config_fim - config_inicio).days + 1 if config_inicio and config_fim else 'N/A' }} dias</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5>Mensalistas Pagos</h5>
+                </div>
+                <div class="card-body">
+                    <p>Total: {{ mensalistas_pagos|length }} jogadores</p>
+                    <ul>
+                        {% for jogador in mensalistas_pagos %}
+                        <li>
+                            {{ jogador.nome }}: 
+                            {% if jogador.data_inicio_mensalidade and jogador.data_fim_mensalidade %}
+                                {{ jogador.data_inicio_mensalidade|format_date }} a {{ jogador.data_fim_mensalidade|format_date }}
+                            {% else %}
+                                <span class="text-warning">Sem datas definidas</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-warning">
+            <h5>Ciclos Encontrados</h5>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Jogadores</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, ciclo in ciclos_encontrados.items() %}
+                    <tr>
+                        <td>{{ ciclo.inicio|format_date }}</td>
+                        <td>{{ ciclo.fim|format_date }}</td>
+                        <td>{{ ciclo.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

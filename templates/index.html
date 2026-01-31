@@ -1,0 +1,1171 @@
+{% extends "base.html" %}
+
+{% block title %}Início - Sistema de Vôlei{% endblock %}
+
+{% block content %}
+<!-- Header responsivo -->
+<div class="header-responsive mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="h4 mb-0 d-none d-md-block">
+            <i class="fas fa-volleyball-ball me-2"></i>Vôlei Draft
+        </h1>
+        <div class="header-badges">
+            {% if semanas_com_info|length > 0 %}
+            <span class="badge bg-primary">
+                <i class="fas fa-calendar"></i> {{ semanas_com_info|length }} Semana{{ 's' if semanas_com_info|length > 1 }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% if not current_user.is_authenticated %}
+<div class="alert alert-info mb-3">
+    <i class="fas fa-info-circle me-2"></i>
+    Faça <a href="{{ url_for('login') }}" class="alert-link">login</a> para confirmar sua presença!
+</div>
+{% endif %}
+<!-- Layout principal responsivo -->
+<div class="row g-3">
+    <!-- Coluna principal (esquerda) - 100% mobile, 70% desktop -->
+    <div class="col-12 col-lg-8 order-1 order-lg-1">
+        <!-- Card das semanas -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-alt"></i> 
+                        <span class="d-none d-md-inline">Próximos Jogos</span>
+                        <span class="d-md-none">Jogos</span>
+                    </h5>
+                    <small class="opacity-75"> <code class="text-white"></code></small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                
+                <!-- Tabs para desktop/tablet -->
+                <div class="d-none d-md-block">
+                    <div class="nav-scrollable px-3 pt-3">
+                        <ul class="nav nav-tabs nav-tabs-scroll" id="semanasTab" role="tablist">
+                            {% for semana_info in semanas_com_info %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if loop.first %}active{% endif %}"
+                                    id="semana-{{ semana_info.semana.id }}-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#semana-{{ semana_info.semana.id }}"
+                                    type="button"
+                                    role="tab"
+                                    onclick="atualizarConteudoLateral({{ loop.index0 }})">
+                                    <div class="d-flex flex-column align-items-start" style="color: #0d6efd;">
+                                        <small class="text-nowrap">
+                                            <i class="fas fa-calendar-day me-1"></i>
+                                            {{ format_date(semana_info.semana.data, '%d/%m') }}
+                                        </small>
+                                        <small class="text-muted">
+                                            {{ get_dia_semana_curto(semana_info.semana.data.weekday()) }}
+                                        </small>
+                                    </div>
+                                    {% if semana_info.semana.lista_aberta %}
+                                    <span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-success">
+                                        <i class="fas fa-unlock"></i>
+                                    </span>
+                                    {% endif %}
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Seleção de semana para mobile com botões -->
+                <div class="d-block d-md-none">
+                    <div class="p-3">
+                        <div class="d-flex overflow-auto pb-2 semana-mobile-buttons" style="gap: 8px;">
+                            {% for semana_info in semanas_com_info %}
+                            <button class="btn btn-sm {% if loop.first %}btn-primary{% else %}btn-outline-primary{% endif %} semana-mobile-btn"
+                                    data-semana-index="{{ loop.index0 }}"
+                                    onclick="selecionarSemanaMobile({{ loop.index0 }})">
+                                <div class="d-flex flex-column align-items-center">
+                                    <small>{{ format_date(semana_info.semana.data, '%d/%m') }}</small>
+                                    <small class="fw-light">{{ get_dia_semana_curto(semana_info.semana.data.weekday()) }}</small>
+                                </div>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conteúdo das semanas -->
+                <div class="tab-content" id="semanasTabContent">
+                    {% for semana_info in semanas_com_info %}
+                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                        id="semana-{{ semana_info.semana.id }}"
+                        role="tabpanel"
+                        data-semana-index="{{ loop.index0 }}"
+                        data-semana-id="{{ semana_info.semana.id }}">
+
+                        <!-- Status resumido -->
+                        <div class="p-3 border-bottom bg-light">
+                            <div class="row g-2">
+                                <div class="col-4 col-sm-3">
+                                    <div class="text-center">
+                                        <div class="small text-muted mb-1">Status</div>
+                                        {% if semana_info.semana.lista_aberta %}
+                                        <span class="badge bg-success py-1">ABERTA</span>
+                                        {% elif semana_info.semana.lista_encerrada %}
+                                        <span class="badge bg-danger py-1">FECHADA</span>
+                                        {% else %}
+                                        <span class="badge bg-warning py-1">INDEFINIDA</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-4 col-sm-3">
+                                    <div class="text-center">
+                                        <div class="small text-muted mb-1">Confirmados</div>
+                                        <div class="h5 mb-0">{{ semana_info.total_confirmados }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-4 col-sm-3">
+                                    <div class="text-center">
+                                        <div class="small text-muted mb-1">Vagas</div>
+                                        <div class="h5 mb-0">{{ semana_info.semana.max_times * semana_info.semana.max_jogadores_por_time }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-sm-3 d-none d-sm-block">
+                                    <div class="text-center">
+                                        <div class="small text-muted mb-1">Mensalistas</div>
+                                        <div class="h5 mb-0">{{ semana_info.mensalistas_confirmados }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de jogadores (apenas se lista aberta) -->
+                        {% if semana_info.semana.lista_aberta %}
+                        <div class="p-3">
+                            <h6 class="mb-3">
+                                <i class="fas fa-clipboard-list me-2"></i>Confirmar Presença
+                            </h6>
+                            
+                            <div class="lista-jogadores-container">
+                                <div class="lista-jogadores">
+                                    {% for jogador in jogadores %}
+                                    {% set confirmacao = semana_info.confirmacoes.get(jogador.id, {}) %}
+                                    <div class="jogador-item mb-2 p-3 rounded border">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <!-- Info jogador -->
+                                            <a href="{{ url_for('ver_jogador', id=jogador.id) }}" 
+                                               class="text-decoration-none text-dark flex-grow-1 me-2"
+                                               style="min-width: 0;">
+                                                <div class="d-flex align-items-center">
+                                                    <!-- Foto -->
+                                                    <div class="me-3">
+                                                        {% if jogador.foto_perfil %}
+                                                        <img src="{{ jogador.foto_perfil }}" 
+                                                             alt="{{ jogador.nome }}"
+                                                             class="rounded-circle"
+                                                             style="width: 45px; height: 45px; object-fit: cover;">
+                                                        {% else %}
+                                                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                                             style="width: 45px; height: 45px;">
+                                                            <i class="fas fa-user text-white"></i>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <!-- Detalhes -->
+                                                    <div class="flex-grow-1" style="min-width: 0;">
+                                                        <div class="d-flex align-items-center mb-1">
+                                                            <strong class="text-truncate me-2">
+                                                                {{ jogador.nome }}
+                                                            </strong>
+                                                            {% if jogador.mensalista %}
+                                                            <span class="badge bg-info py-1 small" title="Mensalista">M</span>
+                                                            {% endif %}
+                                                            {% if jogador.capitao %}
+                                                            <span class="badge bg-warning py-1 small ms-1" title="Capitão">C</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        {% if jogador.apelido %}
+                                                        <small class="text-muted text-truncate d-block">"{{ jogador.apelido }}"</small>
+                                                        {% endif %}
+                                                        {% if jogador.posicao %}
+                                                        <small class="text-muted d-none d-sm-block">{{ get_posicao_display(jogador.posicao) }}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            
+                                            <!-- Botões de confirmação -->
+                                            <div class="btn-group btn-group-sm flex-shrink-0">
+                                                {% if current_user.is_authenticated %}
+                                                <button class="btn btn-outline-success confirm-btn {% if confirmacao.confirmado %}active{% endif %}"
+                                                        data-jogador-id="{{ jogador.id }}"
+                                                        data-semana-id="{{ semana_info.semana.id }}"
+                                                        data-confirmar="true"
+                                                        title="Confirmar presença">
+                                                    <i class="fas fa-check"></i>
+                                                    <span class="d-none d-sm-inline"> Sim</span>
+                                                </button>
+                                                <button class="btn btn-outline-danger confirm-btn {% if confirmacao.confirmado == false %}active{% endif %}"
+                                                        data-jogador-id="{{ jogador.id }}"
+                                                        data-semana-id="{{ semana_info.semana.id }}"
+                                                        data-confirmar="false"
+                                                        title="Não confirmar">
+                                                    <i class="fas fa-times"></i>
+                                                    <span class="d-none d-sm-inline"> Não</span>
+                                                </button>
+                                                {% else %}
+                                                <button class="btn btn-outline-secondary"
+                                                        onclick="alert('Faça login para confirmar presença!'); window.location.href='{{ url_for('login') }}';"
+                                                        title="Faça login para confirmar">
+                                                    <i class="fas fa-sign-in-alt"></i>
+                                                    <span class="d-none d-sm-inline"> Login</span>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Times do draft (se houver) -->
+                        {% if semana_info.semana.draft_em_andamento or semana_info.semana.draft_finalizado %}
+                        {% if semana_info.times %}
+                        <div class="p-3 border-top">
+                            <h6 class="mb-3">
+                                <i class="fas fa-users me-2"></i>Times Formados
+                            </h6>
+                            
+                            <div class="row g-3">
+                                {% for time in semana_info.times %}
+                                {% set escolhas_list = time.escolhas.all() if time.escolhas is defined and time.escolhas is not none else [] %}
+                                <div class="col-12 col-md-6">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-header text-white py-2"
+                                             style="background-color: {{ time.cor }};">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-0">{{ time.nome }}</h6>
+                                                    <small>Capitão: {{ get_jogador_nome(time.capitao_id) }}</small>
+                                                </div>
+                                                <span class="badge bg-light text-dark">
+                                                    {{ escolhas_list|length }}/{{ semana_info.semana.max_jogadores_por_time }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="list-group list-group-flush">
+                                                {% for escolha in escolhas_list %}
+                                                <div class="list-group-item py-2">
+                                                    <div class="d-flex align-items-center">
+                                                        {% if escolha.jogador.foto_perfil %}
+                                                        <img src="{{ escolha.jogador.foto_perfil }}"
+                                                             alt="{{ escolha.jogador.nome }}"
+                                                             class="rounded-circle me-2"
+                                                             style="width: 32px; height: 32px; object-fit: cover;">
+                                                        {% else %}
+                                                        <div class="rounded-circle me-2 bg-secondary d-flex align-items-center justify-content-center"
+                                                             style="width: 32px; height: 32px;">
+                                                            <i class="fas fa-user text-white" style="font-size: 0.8rem;"></i>
+                                                        </div>
+                                                        {% endif %}
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-bold">{{ get_jogador_nome(escolha.jogador_id) }}</div>
+                                                            {% if escolha.jogador.posicao %}
+                                                            <small class="text-muted">{{ get_posicao_display(escolha.jogador.posicao) }}</small>
+                                                            {% endif %}
+                                                        </div>
+                                                        <span class="badge bg-secondary">R{{ escolha.round_num }}</span>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Botão ver draft -->
+                            <div class="text-center mt-3">
+                                <a href="{{ url_for('visualizar_draft') }}?semana_id={{ semana_info.semana.id }}"
+                                   class="btn btn-primary">
+                                    <i class="fas fa-play-circle me-2"></i>
+                                    {% if semana_info.semana.draft_em_andamento %}
+                                    Ver Draft em Andamento
+                                    {% else %}
+                                    Ver Times Formados
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coluna lateral (direita) - 100% mobile, 30% desktop -->
+    <div class="col-12 col-lg-4 order-2 order-lg-2">
+        <!-- Recados -->
+        {% for semana_info in semanas_com_info %}
+        {% if semana_info.recados %}
+        <div class="card mb-3 recados-semana" id="recados-semana-{{ semana_info.semana.id }}"
+             style="display: {% if loop.first %}block{% else %}none{% endif %};">
+            <div class="card-header bg-info text-white py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bullhorn me-2"></i>Recados
+                    </h6>
+                    <small>{{ format_date(semana_info.semana.data) }}</small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for recado in semana_info.recados %}
+                    <div class="list-group-item py-3 {% if recado.importante %}border-start border-3 border-danger{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">{{ recado.titulo }}</h6>
+                            {% if recado.importante %}
+                            <span class="badge bg-danger">IMPORTANTE</span>
+                            {% endif %}
+                        </div>
+                        <p class="card-text small mb-2">{{ recado.conteudo }}</p>
+                        <div class="small text-muted">
+                            <i class="fas fa-user me-1"></i>{{ recado.autor }}
+                            <i class="fas fa-calendar ms-3 me-1"></i>{{ format_date(recado.data_publicacao, '%d/%m %H:%M') }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- Card de lista de espera dinâmico -->
+        <div class="card mb-3" id="listaEsperaCard">
+            <div class="card-header bg-warning text-dark py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Lista de Espera - Apenas convidados
+                    </h6>
+                    <span id="listaEsperaCount" class="badge bg-dark">0</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de informações dinâmicas -->
+        <div class="card" id="informacoesCard">
+            <div class="card-header bg-secondary text-white py-2">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Resumo
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de PIX dinâmico -->
+        <div class="card mb-3" id="pixCard">
+            <div class="card-header bg-success text-white py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-qrcode me-2"></i>Pagamento PIX
+                    </h6>
+                    <span id="pixSemanaData" class="small opacity-75"></span>
+                </div>
+            </div>
+            <div class="card-body p-0" id="pixContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modais -->
+<!-- Modal Lista de Espera -->
+<div class="modal fade" id="esperaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Entrar na Lista de Espera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('entrar_lista_espera') }}" method="POST" id="esperaForm">
+                <input type="hidden" name="semana_id" id="esperaSemanaId" value="">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Completo *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">Telefone (WhatsApp)</label>
+                        <input type="tel" class="form-control" id="telefone" name="telefone"
+                            placeholder="(11) 99999-9999">
+                    </div>
+                    <div class="mb-3">
+                        <label for="posicao" class="form-label">Posição Preferida</label>
+                        <select class="form-select" id="posicao" name="posicao">
+                            <option value="">Qualquer</option>
+                            <option value="levantador">Levantador</option>
+                            <option value="ponteiro">Ponteiro</option>
+                            <option value="central">Central</option>
+                            <option value="libero">Líbero</option>
+                            <option value="oposto">Oposto</option>
+                        </select>
+                    </div>
+                    <p class="text-muted small">
+                        <i class="fas fa-info-circle"></i> Você será chamado se houver desistências.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Entrar na Lista</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Dados das semanas
+    const semanasData = [
+        {% for semana_info in semanas_com_info %}
+        {
+            id: {{ semana_info.semana.id }},
+            data: "{{ format_date(semana_info.semana.data) }}",
+            dia_semana: "{{ get_dia_semana_curto(semana_info.semana.data.weekday()) }}",
+            lista_aberta: {{ 'true' if semana_info.semana.lista_aberta else 'false' }},
+            total_confirmados: {{ semana_info.total_confirmados }},
+            mensalistas_confirmados: {{ semana_info.mensalistas_confirmados }},
+            max_times: {{ semana_info.semana.max_times }},
+            max_jogadores_por_time: {{ semana_info.semana.max_jogadores_por_time }},
+            lista_espera: [
+                {% for pessoa in semana_info.lista_espera %}
+                {
+                    nome: "{{ pessoa.nome|replace('"', '\\"')|escape }}",
+                    posicao_preferida: "{{ pessoa.posicao_preferida or ''|replace('"', '\\"')|escape }}",
+                    adicionado_em: "{{ pessoa.adicionado_em.strftime('%Y-%m-%d %H:%M:%S') if pessoa.adicionado_em else '' }}"
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            pix_infos: [
+                {% for pix in semana_info.pix_infos %}
+                {
+                    id: {{ pix.id }},
+                    chave_pix: "{{ pix.chave_pix|replace('"', '\\"')|escape }}",
+                    tipo_chave: "{{ pix.tipo_chave|escape }}",
+                    nome_recebedor: "{{ pix.nome_recebedor|replace('"', '\\"')|escape }}",
+                    descricao: "{{ pix.descricao or ''|replace('"', '\\"')|escape }}",
+                    cidade_recebedor: "{{ pix.cidade_recebedor or ''|replace('"', '\\"')|escape }}"
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            total_vagas: {{ semana_info.semana.max_times * semana_info.semana.max_jogadores_por_time }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    let semanaAtualIndex = 0;
+
+    $(document).ready(function () {
+        // Inicializa conteúdo lateral
+        atualizarConteudoLateral(0);
+
+        // Configura botão de lista de espera
+        if (semanasData.length > 0) {
+            $('#esperaSemanaId').val(semanasData[0].id);
+        }
+
+        // Confirmação de presença - VERSÃO SIMPLIFICADA (sem código)
+        $('.confirm-btn').click(function (e) {
+            e.stopPropagation(); // Impede que o clique propague para o link do perfil
+            
+            const jogadorId = $(this).data('jogador-id');
+            const confirmar = $(this).data('confirmar');
+            const semanaId = $(this).data('semana-id');
+            
+            // Pergunta de confirmação simples
+            const mensagem = confirmar ? 
+                'Deseja confirmar sua presença?' : 
+                'Deseja cancelar sua presença?';
+            
+            if (confirm(mensagem)) {
+                confirmarPresenca(jogadorId, confirmar, semanaId);
+            }
+        });
+
+        // Evento das tabs desktop
+        $(document).on('shown.bs.tab', 'button[data-bs-toggle="tab"]', function (e) {
+            const tabId = $(e.target).data('bs-target');
+            const tabIndex = $(tabId).data('semana-index');
+            
+            if (tabIndex !== undefined) {
+                atualizarConteudoLateral(tabIndex);
+                atualizarBotoesMobile(tabIndex);
+            }
+        });
+
+        // Enter no formulário de lista de espera
+        $('#nome, #telefone, #posicao').keypress(function (e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                const nextInput = $(this).nextAll('input, select, textarea').first();
+                if (nextInput.length) {
+                    nextInput.focus();
+                } else {
+                    $('#esperaForm').submit();
+                }
+            }
+        });
+    });
+
+    // Função para selecionar semana no mobile
+    function selecionarSemanaMobile(index) {
+        if (index >= semanasData.length) return;
+        
+        // Ativa o botão correspondente
+        atualizarBotoesMobile(index);
+        
+        // Mostra o conteúdo da semana
+        $('.tab-pane').removeClass('show active');
+        $(`[data-semana-index="${index}"]`).addClass('show active');
+        
+        // Atualiza conteúdo lateral
+        atualizarConteudoLateral(index);
+    }
+
+    // Função para atualizar botões mobile
+    function atualizarBotoesMobile(activeIndex) {
+        $('.semana-mobile-btn').removeClass('btn-primary').addClass('btn-outline-primary');
+        $(`.semana-mobile-btn[data-semana-index="${activeIndex}"]`)
+            .removeClass('btn-outline-primary')
+            .addClass('btn-primary');
+    }
+
+    // Função principal de confirmação de presença - CORRIGIDA
+    function confirmarPresenca(jogadorId, confirmar, semanaId) {
+        // Atualiza visualmente o botão ANTES do request (feedback imediato)
+        atualizarEstadoBotao(jogadorId, confirmar, semanaId);
+        
+        // Atualiza contadores localmente para feedback imediato
+        const semanaAtual = semanasData[semanaAtualIndex];
+        if (confirmar) {
+            semanaAtual.total_confirmados++;
+        } else {
+            semanaAtual.total_confirmados = Math.max(0, semanaAtual.total_confirmados - 1);
+        }
+        
+        // Atualiza o card de informações imediatamente
+        atualizarInformacoes(semanaAtual);
+        
+        // Faz o request AJAX
+        $.ajax({
+            url: '{{ url_for("confirmar_presenca") }}',
+            type: 'POST',
+            data: {
+                jogador_id: jogadorId,
+                confirmar: confirmar,
+                semana_id: semanaId
+            },
+            success: function (response) {
+                if (response.success) {
+                    // Se necessário, sincroniza os dados com a resposta
+                    if (response.novo_estado !== undefined) {
+                        // Se o servidor retornou o estado atualizado
+                        const confirmacaoAtualizada = response.novo_estado;
+                        
+                        // Encontra o botão correto e atualiza novamente
+                        $(`.confirm-btn[data-jogador-id="${jogadorId}"][data-semana-id="${semanaId}"]`)
+                            .removeClass('active');
+                        
+                        // Ativa o botão correto
+                        const seletorCorreto = confirmacaoAtualizada ? 
+                            `[data-confirmar="true"]` : `[data-confirmar="false"]`;
+                        
+                        $(`.confirm-btn[data-jogador-id="${jogadorId}"][data-semana-id="${semanaId}"]${seletorCorreto}`)
+                            .addClass('active');
+                    }
+                    
+                    // Atualiza os contadores com os dados do servidor se disponíveis
+                    if (response.total_confirmados !== undefined) {
+                        semanasData[semanaAtualIndex].total_confirmados = response.total_confirmados;
+                        atualizarInformacoes(semanasData[semanaAtualIndex]);
+                    }
+                    
+                    // Mostra mensagem de sucesso
+                    showAlert(response.message, 'success');
+                    
+                } else {
+                    // Se houve erro, reverte as mudanças visuais
+                    showAlert('Erro: ' + response.message, 'danger');
+                    recarregarDadosSemana(semanaId);
+                }
+            },
+            error: function (xhr) {
+                // Reverte as mudanças visuais em caso de erro
+                if (xhr.status === 401) {
+                    showAlert('Faça login para confirmar presença!', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '{{ url_for("login") }}';
+                    }, 1500);
+                } else if (xhr.status === 403) {
+                    showAlert('Você só pode confirmar sua própria presença!', 'danger');
+                    recarregarDadosSemana(semanaId);
+                } else {
+                    showAlert('Erro ao confirmar presença. Tente novamente.', 'danger');
+                    recarregarDadosSemana(semanaId);
+                }
+            }
+        });
+    }
+
+    // Função para atualizar visualmente o estado dos botões - CORRIGIDA
+    function atualizarEstadoBotao(jogadorId, confirmar, semanaId) {
+        // Encontra todos os botões para este jogador nesta semana
+        const botoes = $(`.confirm-btn[data-jogador-id="${jogadorId}"][data-semana-id="${semanaId}"]`);
+        const grupo = botoes.closest('.btn-group');
+        
+        // Remove classes ativas de todos os botões deste grupo
+        grupo.find('.confirm-btn').removeClass('active').blur();
+        
+        // Adiciona classe ativa apenas ao botão correspondente à ação
+        botoes.each(function() {
+            const $btn = $(this);
+            const isConfirmarBtn = $btn.data('confirmar') === true;
+            
+            if ((confirmar && isConfirmarBtn) || (!confirmar && !isConfirmarBtn)) {
+                $btn.addClass('active');
+                
+                // Adiciona um efeito visual de confirmação
+                $btn.addClass('btn-confirmed');
+                setTimeout(() => {
+                    $btn.removeClass('btn-confirmed');
+                }, 300);
+            }
+        });
+    }
+
+    // Função para atualizar conteúdo lateral ao trocar de semana
+    function atualizarConteudoLateral(index) {
+        if (index >= semanasData.length) return;
+        
+        semanaAtualIndex = index;
+        const semana = semanasData[index];
+
+        // Atualiza todos os componentes laterais
+        atualizarInformacoes(semana);
+        atualizarPIX(semana);
+        atualizarListaEspera(semana);
+        mostrarRecadosSemana(semana.id);
+        
+        // Atualiza o formulário de lista de espera
+        $('#esperaSemanaId').val(semana.id);
+    }
+
+    // Função para atualizar o card de informações
+    function atualizarInformacoes(semana) {
+        const informacoesCard = $('#informacoesCard .card-body');
+        const vagasRestantes = semana.total_vagas - semana.total_confirmados;
+
+        let html = `
+            <div class="p-3">
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="card bg-light h-100 border-0">
+                            <div class="card-body text-center py-2">
+                                <div class="small text-muted">Confirmados</div>
+                                <div class="h4 mb-0 text-primary">${semana.total_confirmados}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card bg-light h-100 border-0">
+                            <div class="card-body text-center py-2">
+                                <div class="small text-muted">Vagas Restantes</div>
+                                <div class="h4 mb-0 ${vagasRestantes <= 0 ? 'text-danger' : 'text-success'}">${vagasRestantes}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="list-group list-group-flush small">
+                    <div class="list-group-item d-flex justify-content-between py-2 border-0">
+                        <span class="text-muted">Data:</span>
+                        <strong>${semana.data}</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between py-2 border-0">
+                        <span class="text-muted">Mensalistas:</span>
+                        <strong>${semana.mensalistas_confirmados}</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between py-2 border-0">
+                        <span class="text-muted">Times:</span>
+                        <strong>${semana.max_times}</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between py-2 border-0">
+                        <span class="text-muted">Jogadores/Time:</span>
+                        <strong>${semana.max_jogadores_por_time}</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between py-2 border-0">
+                        <span class="text-muted">Total Vagas:</span>
+                        <strong>${semana.total_vagas}</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between py-2 border-0">
+                        <span class="text-muted">Lista de Espera:</span>
+                        <strong>${semana.lista_espera ? semana.lista_espera.length : 0}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        informacoesCard.html(html);
+    }
+
+    // Função para atualizar informações PIX
+    function atualizarPIX(semana) {
+        const pixCard = $('#pixCard .card-body');
+        
+        // Atualiza a data da semana no cabeçalho
+        $('#pixSemanaData').text(semana.data);
+        
+        if (semana.pix_infos && semana.pix_infos.length > 0) {
+            let html = `<div class="p-3">`;
+            
+            semana.pix_infos.forEach(function(pix, index) {
+                html += `
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">${pix.nome_recebedor}</h6>
+                            ${pix.cidade_recebedor ? `<small class="text-muted">${pix.cidade_recebedor}</small>` : ''}
+                        </div>
+                        <div class="input-group input-group-sm mb-2">
+                            <input type="text" class="form-control text-center" value="${pix.chave_pix}" readonly
+                                id="pix-${pix.id}">
+                            <button class="btn btn-outline-success" type="button"
+                                onclick="copiarPIX('pix-${pix.id}', '${pix.chave_pix}')"
+                                title="Copiar chave PIX">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-key me-1"></i>${pix.tipo_chave.toUpperCase()}
+                            ${pix.descricao ? `<br>${pix.descricao}` : ''}
+                        </small>
+                    </div>
+                    ${index < semana.pix_infos.length - 1 ? '<hr class="my-2">' : ''}
+                `;
+            });
+            
+            html += `</div>`;
+            pixCard.html(html);
+        } else {
+            pixCard.html(`
+                <div class="p-3 text-center">
+                    <i class="fas fa-qrcode fa-2x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Nenhuma informação PIX disponível</p>
+                </div>
+            `);
+        }
+    }
+
+    // Função para atualizar lista de espera
+    function atualizarListaEspera(semana) {
+        const listaEsperaCard = $('#listaEsperaCard .card-body');
+        const listaEsperaCount = $('#listaEsperaCount');
+        
+        // Atualiza contador
+        const count = semana.lista_espera ? semana.lista_espera.length : 0;
+        listaEsperaCount.text(count);
+
+        if (semana.lista_espera && semana.lista_espera.length > 0) {
+            let html = `
+                <div class="p-3">
+                    <div class="list-group list-group-flush mb-3">
+            `;
+
+            semana.lista_espera.forEach(function (pessoa) {
+                let hora = '';
+                if (pessoa.adicionado_em) {
+                    const data = new Date(pessoa.adicionado_em);
+                    hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                }
+
+                html += `
+                    <div class="list-group-item py-2 border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="d-block">${pessoa.nome}</strong>
+                                ${pessoa.posicao_preferida ? `<small class="text-muted">${pessoa.posicao_preferida}</small>` : ''}
+                            </div>
+                            ${hora ? `<small class="text-muted">${hora}</small>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+            `;
+
+            if (semana.lista_aberta) {
+                html += `
+                    <button class="btn btn-outline-warning w-100" data-bs-toggle="modal" data-bs-target="#esperaModal">
+                        <i class="fas fa-plus me-2"></i>Entrar na Lista
+                    </button>
+                `;
+            }
+
+            html += `</div>`;
+            listaEsperaCard.html(html);
+        } else {
+            let html = `
+                <div class="p-3 text-center">
+                    <i class="fas fa-clock fa-2x text-muted mb-3"></i>
+                    <p class="text-muted mb-3">Ninguém na lista de espera</p>
+            `;
+            
+            if (semana.lista_aberta) {
+                html += `
+                    <button class="btn btn-outline-warning w-100" data-bs-toggle="modal" data-bs-target="#esperaModal">
+                        <i class="fas fa-plus me-2"></i>Entrar na Lista
+                    </button>
+                `;
+            }
+            
+            html += `</div>`;
+            listaEsperaCard.html(html);
+        }
+    }
+
+    // Função para mostrar recados específicos da semana
+    function mostrarRecadosSemana(semanaId) {
+        $('.recados-semana').hide();
+        const recadosDiv = $(`#recados-semana-${semanaId}`);
+        if (recadosDiv.length) {
+            recadosDiv.show();
+        }
+    }
+
+    // Função para copiar chave PIX
+    function copiarPIX(inputId, chave) {
+        const input = document.getElementById(inputId);
+        input.select();
+        input.setSelectionRange(0, 99999); // Para mobile
+        
+        try {
+            navigator.clipboard.writeText(chave).then(() => {
+                showAlert('Chave PIX copiada!', 'success');
+            }).catch(err => {
+                // Fallback para navegadores mais antigos
+                document.execCommand('copy');
+                showAlert('Chave PIX copiada!', 'success');
+            });
+        } catch (err) {
+            // Fallback alternativo
+            document.execCommand('copy');
+            showAlert('Chave PIX copiada!', 'success');
+        }
+    }
+
+    // Função para mostrar alertas toast
+    function showAlert(message, type) {
+        // Remove alertas anteriores
+        $('.custom-toast').remove();
+        
+        const alert = $(`
+            <div class="custom-toast alert alert-${type} alert-dismissible fade show position-fixed"
+                 role="alert" style="z-index: 9999; bottom: 20px; right: 20px; max-width: 350px;">
+                <div class="d-flex">
+                    <div class="flex-grow-1">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        `);
+        
+        $('body').append(alert);
+        
+        // Remove automaticamente após 3 segundos
+        setTimeout(() => {
+            alert.alert('close');
+        }, 3000);
+    }
+
+    // Função para mostrar loading
+    function showLoading(element, show = true) {
+        if (show) {
+            $(element).html(`
+                <div class="text-center py-4">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            `);
+        }
+    }
+</script>
+
+<style>
+    /* Layout responsivo */
+    @media (max-width: 768px) {
+        .header-responsive h1 {
+            font-size: 1.2rem;
+        }
+        
+        .semana-mobile-buttons {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .semana-mobile-buttons::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .semana-mobile-btn {
+            min-width: 70px;
+            white-space: nowrap;
+        }
+        
+        .jogador-item .btn-group {
+            flex-wrap: nowrap;
+        }
+        
+        .jogador-item .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .custom-toast {
+            bottom: 10px !important;
+            right: 10px !important;
+            left: 10px !important;
+            max-width: calc(100% - 20px) !important;
+        }
+    }
+    
+    @media (min-width: 768px) and (max-width: 992px) {
+        .jogador-item {
+            padding: 0.75rem;
+        }
+    }
+    
+    /* Nav tabs scrollable */
+    .nav-scrollable {
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+    }
+    
+    .nav-scrollable::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .nav-scrollable::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .nav-scrollable::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 3px;
+    }
+    
+    .nav-scrollable::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+    }
+    
+    /* Cards otimizados */
+    .card-header {
+        padding: 0.5rem 1rem;
+    }
+    
+    /* Lista de jogadores */
+    .lista-jogadores-container {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+    
+    .lista-jogadores-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .lista-jogadores-container::-webkit-scrollbar-track {
+        background: #f8f9fa;
+        border-radius: 3px;
+    }
+    
+    .lista-jogadores-container::-webkit-scrollbar-thumb {
+        background: #dee2e6;
+        border-radius: 3px;
+    }
+    
+    .lista-jogadores-container::-webkit-scrollbar-thumb:hover {
+        background: #adb5bd;
+    }
+    
+    .jogador-item {
+        transition: all 0.2s ease;
+        border: 1px solid #e9ecef;
+        background-color: white;
+    }
+    
+    .jogador-item:hover {
+        border-color: #adb5bd;
+        background-color: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.05);
+    }
+    
+    .jogador-item a:hover {
+        text-decoration: none;
+    }
+    
+    .jogador-item a:hover strong {
+        color: #0d6efd;
+    }
+    
+    /* Badges compactos */
+    .header-badges .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* Ajustes para telas muito pequenas */
+    @media (max-width: 360px) {
+        .jogador-item {
+            padding: 0.75rem;
+        }
+        
+        .semana-mobile-btn {
+            min-width: 65px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+    }
+    
+    /* Animações suaves */
+    .recados-semana,
+    #informacoesCard,
+    #pixCard,
+    #listaEsperaCard {
+        transition: opacity 0.3s ease;
+    }
+    
+    /* Melhor legibilidade em mobile */
+    @media (max-width: 768px) {
+        body {
+            font-size: 0.9rem;
+        }
+        
+        h5, h6 {
+            font-size: 0.95rem;
+        }
+    }
+    
+    /* Espaçamento otimizado */
+    .g-3 {
+        --bs-gutter-y: 1rem;
+        --bs-gutter-x: 1rem;
+    }
+    
+    /* Botões responsivos */
+    .btn {
+        white-space: nowrap;
+    }
+    
+    /* Modo escuro */
+    @media (prefers-color-scheme: dark) {
+        .jogador-item {
+            background-color: #f5f5f5;
+            border-color: #444;
+        }
+        
+        .jogador-item:hover {
+            background-color: #e8eff0;
+            border-color: #666;
+        }
+        
+        .lista-jogadores-container::-webkit-scrollbar-track {
+            background: #333;
+        }
+        
+        .lista-jogadores-container::-webkit-scrollbar-thumb {
+            background: #555;
+        }
+        
+        .nav-scrollable::-webkit-scrollbar-track {
+            background: #333;
+        }
+        
+        .nav-scrollable::-webkit-scrollbar-thumb {
+            background: #555;
+        }
+    }
+    
+    /* Estilo dos botões ativos */
+    .confirm-btn.active {
+        background-color: #198754;
+        color: white;
+        border-color: #198754;
+    }
+    
+    .confirm-btn.active.btn-outline-danger {
+        background-color: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+    
+    /* Toast personalizado */
+    .custom-toast {
+        animation: slideInRight 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    /* Loading spinner */
+    .spinner-border {
+        width: 2rem;
+        height: 2rem;
+    }
+</style>
+{% endblock %}

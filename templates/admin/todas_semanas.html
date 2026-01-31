@@ -1,0 +1,295 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Todas as Semanas{% endblock %}
+
+{% block admin_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Gerenciar Todas as Semanas</h5>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-arrow-left"></i> Voltar ao Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="card-body border-bottom">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="filtro_data" class="form-label">Filtrar por data:</label>
+                <select class="form-select" id="filtro_data" name="filtro_data">
+                    <option value="futuras" {% if filtro_data == 'futuras' %}selected{% endif %}>Futuras</option>
+                    <option value="passadas" {% if filtro_data == 'passadas' %}selected{% endif %}>Passadas</option>
+                    <option value="todas" {% if filtro_data == 'todas' %}selected{% endif %}>Todas</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label for="filtro_status" class="form-label">Filtrar por status:</label>
+                <select class="form-select" id="filtro_status" name="filtro_status">
+                    <option value="todas" {% if filtro_status == 'todas' %}selected{% endif %}>Todas</option>
+                    <option value="abertas" {% if filtro_status == 'abertas' %}selected{% endif %}>Lista Aberta</option>
+                    <option value="fechadas" {% if filtro_status == 'fechadas' %}selected{% endif %}>Lista Fechada</option>
+                    <option value="draft_andamento" {% if filtro_status == 'draft_andamento' %}selected{% endif %}>Draft em Andamento</option>
+                    <option value="draft_finalizado" {% if filtro_status == 'draft_finalizado' %}selected{% endif %}>Draft Finalizado</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Aplicar Filtros
+                </button>
+            </div>
+        </form>
+        
+        <!-- Botão para criar semana manual -->
+        <div class="mt-3 text-end">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#criarSemanaModal">
+                <i class="fas fa-plus"></i> Criar Partida Manualmente
+            </button>
+            <a href="{{ url_for('admin_configuracoes') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-cog"></i> Configurações
+            </a>
+        </div>
+    </div>
+    
+    <!-- Lista de Semanas -->
+    <div class="card-body">
+        {% if semanas_com_info %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Dia</th>
+                        <th>Status</th>
+                        <th>Confirmações</th>
+                        <th>Lista Espera</th>
+                        <th>Times</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in semanas_com_info %}
+                    {% set semana = item.semana %}
+                    <tr class="{% if semana.data == hoje %}table-info{% endif %} {% if semana.data < hoje %}table-secondary{% endif %}">
+                        <td>
+                            <strong>{{ format_date(semana.data) }}</strong>
+                            {% if semana.data == hoje %}
+                            <br><span class="badge bg-primary">HOJE</span>
+                            {% elif semana.data < hoje %}
+                            <br><span class="badge bg-secondary">PASSADA</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if semana.data.weekday() == 3 %}bg-success{% else %}bg-info{% endif %}">
+                                {{ get_dia_semana_curto(semana.data.weekday()) }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if semana.lista_aberta %}
+                            <span class="badge bg-success">Lista Aberta</span>
+                            {% elif semana.lista_encerrada and not semana.draft_em_andamento %}
+                            <span class="badge bg-warning">Lista Fechada</span>
+                            {% elif semana.draft_em_andamento %}
+                            <span class="badge bg-primary">Draft em Andamento</span>
+                            {% elif semana.draft_finalizado %}
+                            <span class="badge bg-dark">Draft Finalizado</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Não Iniciada</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1" style="height: 20px;">
+                                    {% set percentual = (item.confirmados / item.total_vagas * 100) if item.total_vagas > 0 else 0 %}
+                                    <div class="progress-bar {% if percentual >= 100 %}bg-success{% elif percentual >= 50 %}bg-warning{% else %}bg-info{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ percentual }}%"
+                                         title="{{ item.confirmados }}/{{ item.total_vagas }}">
+                                    </div>
+                                </div>
+                                <span class="ms-2">{{ item.confirmados }}/{{ item.total_vagas }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if item.lista_espera > 0 %}
+                            <span class="badge bg-warning">{{ item.lista_espera }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.times > 0 %}
+                            <span class="badge bg-success">{{ item.times }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <!-- Botão Principal de Gerenciamento -->
+                                <a href="{{ url_for('admin_dashboard', semana_id=semana.id) }}" 
+                                   class="btn btn-outline-primary" title="Gerenciar Semana">
+                                    <i class="fas fa-tasks"></i>
+                                </a>
+                                
+                                <!-- Menu Dropdown com mais ações -->
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Mais ações</span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('configurar_semana', id=semana.id) }}">
+                                            <i class="fas fa-cog"></i> Configurar
+                                        </a>
+                                    </li>
+                                    {% if semana.draft_finalizado %}
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('gerenciar_times') }}?semana_id={{ semana.id }}">
+                                            <i class="fas fa-users"></i> Ver Times
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if semana.draft_em_andamento or semana.draft_finalizado %}
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('visualizar_draft') }}?semana_id={{ semana.id }}">
+                                            <i class="fas fa-list-ol"></i> Ver Draft
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#" 
+                                           onclick="return confirmExcluirSemana({{ semana.id }}, '{{ format_date(semana.data) }}')">
+                                            <i class="fas fa-trash"></i> Excluir
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Estatísticas -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-body py-3">
+                        <h6 class="card-title">Total de Semanas</h6>
+                        <h4 class="mb-0">{{ semanas_com_info|length }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body py-3">
+                        <h6 class="card-title">Com Lista Aberta</h6>
+                        <h4 class="mb-0">{{ semanas_com_info|selectattr('semana.lista_aberta')|list|length }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-body py-3">
+                        <h6 class="card-title">Com Draft Finalizado</h6>
+                        <h4 class="mb-0">{{ semanas_com_info|selectattr('semana.draft_finalizado')|list|length }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body py-3">
+                        <h6 class="card-title">Futuras</h6>
+                        <h4 class="mb-0">{{ semanas_com_info|selectattr('semana.data', '>=', hoje)|list|length }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5>Nenhuma semana encontrada</h5>
+            <p class="text-muted">Tente ajustar os filtros ou crie semanas nas configurações globais.</p>
+            <a href="{{ url_for('admin_configuracoes') }}" class="btn btn-primary">
+                <i class="fas fa-cog"></i> Ir para Configurações
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para criar semana manual -->
+<div class="modal fade" id="criarSemanaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-plus"></i> Criar Partida Manualmente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('criar_semana_manual') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="data_semana" class="form-label">Data da Semana *</label>
+                        <input type="date" class="form-control" id="data_semana" name="data_semana" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <input type="text" class="form-control" id="descricao" name="descricao" 
+                               placeholder="Ex: Jogo de Vôlei - Especial">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        A partida será criada com lista aberta e configurações padrão.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar Partida</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmExcluirSemana(semanaId, data) {
+    if (confirm(`Tem certeza que deseja excluir a semana de ${data}?\n\nEsta ação não pode ser desfeita!`)) {
+        window.location.href = `/admin/semana/${semanaId}/excluir`;
+        return true;
+    }
+    return false;
+}
+
+$(document).ready(function() {
+    // Ordenação da tabela
+    $('th').click(function() {
+        var table = $(this).parents('table').eq(0);
+        var rows = table.find('tr:gt(0)').toArray().sort(comparer($(this).index()));
+        this.asc = !this.asc;
+        if (!this.asc) {
+            rows = rows.reverse();
+        }
+        for (var i = 0; i < rows.length; i++) {
+            table.append(rows[i]);
+        }
+    });
+    
+    function comparer(index) {
+        return function(a, b) {
+            var valA = $(a).children('td').eq(index).text();
+            var valB = $(b).children('td').eq(index).text();
+            return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB);
+        }
+    }
+});
+</script>
+{% endblock %}

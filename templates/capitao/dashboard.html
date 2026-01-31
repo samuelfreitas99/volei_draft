@@ -1,0 +1,767 @@
+{% extends "base.html" %}
+
+{% block title %}Painel do Capitão - Sistema de Vôlei{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/draft.css') }}">
+<style>
+    /* Estilo para links de perfil */
+    a.text-decoration-none:hover {
+        color: #3498db !important;
+        text-decoration: underline !important;
+    }
+
+    /* Links nos badges/time cards */
+    .card-header a.text-white:hover {
+        color: #f8f9fa !important;
+        opacity: 0.9;
+    }
+    /* Cards de navegação rápida para capitães */
+    .quick-nav-card {
+        border: none;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        height: 100%;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .quick-nav-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .quick-nav-card.primary {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+    }
+    
+    .quick-nav-card.warning {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        color: white;
+    }
+    
+    .quick-nav-card.success {
+        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        color: white;
+    }
+    
+    .nav-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    /* Status do draft */
+    .draft-status {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 5px solid #3498db;
+    }
+    
+    .draft-status.ativo {
+        border-left-color: #2ecc71;
+        animation: pulse 2s infinite;
+    }
+    
+    .draft-status.minha-vez {
+        border-left-color: #e74c3c;
+        background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+    }
+    
+    /* Seleção de semana */
+    .semana-selector {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .semana-option {
+        padding: 10px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 5px;
+    }
+    
+    .semana-option:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .semana-option.active {
+        background-color: #e7f1ff;
+        border-left: 4px solid #3498db;
+    }
+    
+    /* Estilos originais preservados */
+    .jogador-card {
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .jogador-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .jogador-card.selected {
+        border: 2px solid #198754;
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    
+    .time-card {
+        border-left: 4px solid;
+    }
+    
+    .badge-time {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .quick-nav-card {
+            margin-bottom: 15px;
+        }
+        
+        .nav-icon {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="draft-status {% if minha_vez %}minha-vez{% elif semana.draft_em_andamento %}ativo{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-2">
+                        <i class="fas fa-crown me-2"></i>Painel do Capitão
+                    </h3>
+                    <h5 class="mb-0">{{ format_date(semana.data) }}</h5>
+                    <p class="mb-0 text-muted">
+                        {{ get_dia_semana(semana.data.weekday()) }}
+                        {% if semana.draft_finalizado %}
+                        - <span class="badge bg-success">Draft Finalizado</span>
+                        {% elif semana.draft_em_andamento %}
+                        - <span class="badge bg-warning">Draft em Andamento</span>
+                        {% elif semana.lista_encerrada %}
+                        - <span class="badge bg-secondary">Lista Fechada</span>
+                        {% else %}
+                        - <span class="badge bg-info">Lista Aberta</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="text-end">
+                    {% if minha_vez %}
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-bullhorn"></i> <strong>SUA VEZ DE ESCOLHER!</strong>
+                    </div>
+                    {% elif draft_status %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-clock"></i> Aguardando sua vez
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="semana-selector">
+            <h6 class="mb-3"><i class="fas fa-calendar-alt me-2"></i>Outras Semanas</h6>
+            <div class="list-group">
+                {% for semana_item in semanas_disponiveis %}
+                <a href="{{ url_for('capitao_dashboard', semana_id=semana_item.id) }}"
+                   class="list-group-item list-group-item-action semana-option {% if semana_item.id == semana.id %}active{% endif %}">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>{{ format_date(semana_item.data) }}</strong>
+                            <br>
+                            <small class="text-muted">{{ get_dia_semana(semana_item.data.weekday()) }}</small>
+                        </div>
+                        <div>
+                            {% if semana_item.draft_finalizado %}
+                            <span class="badge bg-success">✓</span>
+                            {% elif semana_item.draft_em_andamento %}
+                            <span class="badge bg-warning">▶</span>
+                            {% elif semana_item.lista_encerrada %}
+                            <span class="badge bg-secondary">✗</span>
+                            {% else %}
+                            <span class="badge bg-info">○</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Status do Draft (AGORA COM SEMANA ESPECÍFICA) -->
+        <div class="card mb-4">
+            <div class="card-header {% if minha_vez %}bg-warning text-dark{% else %}bg-secondary text-white{% endif %}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-crown"></i> Painel do Capitão
+                        <small class="ms-2">- {{ format_date(semana.data) }}</small>
+                    </h5>
+                    <div>
+                        <span class="badge bg-primary">Rodada {{ draft_status.rodada_atual if draft_status else '0' }}</span>
+                        <span class="badge bg-primary">Escolha #{{ draft_status.escolha_atual if draft_status else '0' }}</span>
+                        {% if minha_vez %}
+                        <span class="badge bg-danger">SUA VEZ!</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if not semana.draft_em_andamento and not semana.draft_finalizado %}
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-clock"></i> Aguardando Draft</h5>
+                    <p class="mb-0">O draft ainda não foi iniciado para esta semana.</p>
+                </div>
+                {% elif semana.draft_finalizado %}
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle"></i> Draft Finalizado</h5>
+                    <p class="mb-0">O draft foi concluído para esta semana.</p>
+                </div>
+                {% elif minha_vez %}
+                <div class="alert alert-success" id="minha-vez-alert">
+                    <h5><i class="fas fa-bullhorn"></i> É A SUA VEZ DE ESCOLHER!</h5>
+                    <p class="mb-0">
+                        Escolha um jogador abaixo. Não há limite de tempo.
+                        {% if draft_status %}
+                        <br>Rodada {{ draft_status.rodada_atual }} • Escolha #{{ draft_status.escolha_atual }}
+                        {% endif %}
+                    </p>
+                </div>
+                {% else %}
+                <div class="alert alert-info" id="nao-minha-vez-alert">
+                    <h5><i class="fas fa-clock"></i> AGUARDANDO SUA VEZ</h5>
+                    <p class="mb-0">
+                        Vez atual: <strong id="capitao-atual-nome">{{ draft_status.vez_capitao.nome if draft_status and draft_status.vez_capitao else 'Nenhum' }}</strong><br>
+                        Rodada: <span id="rodada-atual">{{ draft_status.rodada_atual if draft_status else '0' }}</span> • 
+                        Escolha: <span id="escolha-atual">{{ draft_status.escolha_atual if draft_status else '0' }}</span>
+                    </p>
+                </div>
+                {% endif %}
+                
+                <!-- Seus Jogadores -->
+                {% if time %}
+                <h6 class="mt-4 mb-3">
+                    <i class="fas fa-users me-1"></i> Seus Jogadores 
+                    <span class="badge bg-secondary">{{ minhas_escolhas|length }}/{{ semana.max_jogadores_por_time }}</span>
+                </h6>
+                {% if minhas_escolhas %}
+                <div class="row" id="meus-jogadores">
+                    {% for escolha in minhas_escolhas %}
+                    <div class="col-md-6 col-lg-4 mb-3" id="jogador-meu-{{ escolha.jogador.id }}">
+                        <div class="card border-success h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start mb-2">
+                                    {% if escolha.jogador.foto_perfil %}
+                                    <div class="me-2">
+                                        <img src="{{ escolha.jogador.foto_perfil }}" 
+                                            alt="{{ escolha.jogador.nome }}" 
+                                            class="rounded-circle" 
+                                            width="40" 
+                                            height="40"
+                                            style="object-fit: cover;">
+                                    </div>
+                                    {% else %}
+                                    <div class="me-2">
+                                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                            style="width: 40px; height: 40px; background-color: #e9ecef;">
+                                            <i class="fas fa-user text-muted"></i>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <h6 class="card-title mb-0">
+                                            <a href="{{ url_for('ver_jogador', id=escolha.jogador.id) }}" class="text-decoration-none">
+                                                {{ escolha.jogador.nome }}
+                                            </a>
+                                        </h6>        
+                                        {% if escolha.jogador.apelido %}
+                                        <small class="text-muted">"{{ escolha.jogador.apelido }}"</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if escolha.jogador.posicao %}
+                                        <span class="badge bg-info badge-time">{{ get_posicao_display(escolha.jogador.posicao) }}</span>
+                                        {% endif %}
+                                        <span class="badge badge-time {% if escolha.jogador.nivel == 'iniciante' %}bg-info
+                                                        {% elif escolha.jogador.nivel == 'intermediario' %}bg-primary
+                                                        {% else %}bg-warning{% endif %}">
+                                            {{ get_nivel_display(escolha.jogador.nivel) }}
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">R{{ escolha.round_num }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users-slash fa-2x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Você ainda não escolheu nenhum jogador.</p>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Jogadores Disponíveis -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Jogadores Disponíveis</h5>
+                    <span class="badge bg-light text-dark" id="contador-disponiveis">{{ jogadores_disponiveis|length }}</span>
+                </div>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if jogadores_disponiveis %}
+                    <div id="jogadores-lista">
+                        {% for jogador in jogadores_disponiveis %}
+                        <div class="card jogador-card mb-3" id="jogador-{{ jogador.id }}" data-jogador-id="{{ jogador.id }}">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    {% if jogador.foto_perfil %}
+                                    <div class="me-3">
+                                        <img src="{{ jogador.foto_perfil }}" 
+                                            alt="{{ jogador.nome }}" 
+                                            class="rounded-circle" 
+                                            width="50" 
+                                            height="50"
+                                            style="object-fit: cover;">
+                                    </div>
+                                    {% else %}
+                                    <div class="me-3">
+                                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                            style="width: 50px; height: 50px; background-color: #e9ecef;">
+                                            <i class="fas fa-user text-muted"></i>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
+                                            <a href="{{ url_for('ver_jogador', id=jogador.id) }}" class="text-decoration-none">
+                                                {{ jogador.nome }}
+                                            </a>
+                                        </h6>
+                                        {% if jogador.apelido %}
+                                            <small class="text-muted">"{{ jogador.apelido }}"</small><br>
+                                        {% endif %}
+                                        <div class="mt-2">
+                                            {% if jogador.posicao %}
+                                            <span class="badge bg-info badge-time me-1">{{ get_posicao_display(jogador.posicao) }}</span>
+                                            {% endif %}
+                                            <span class="badge badge-time me-1 {% if jogador.nivel == 'iniciante' %}bg-info
+                                                                {% elif jogador.nivel == 'intermediario' %}bg-primary
+                                                                {% else %}bg-warning{% endif %}">
+                                                {{ get_nivel_display(jogador.nivel) }}
+                                            </span>
+                                            {% if jogador.mensalista %}
+                                            <span class="badge bg-success badge-time">Mensalista</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if minha_vez %}
+                                    <div class="align-self-center">
+                                        <button class="btn btn-sm btn-success escolher-btn" 
+                                                data-jogador-id="{{ jogador.id }}"
+                                                data-jogador-nome="{{ jogador.nome }}">
+                                            <i class="fas fa-plus"></i> Escolher
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        {% if semana.draft_em_andamento %}
+                        <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                        <p class="text-muted mb-0">Todos os jogadores já foram escolhidos.</p>
+                        {% else %}
+                        <i class="fas fa-users fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Aguardando início do draft.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            {% if minha_vez and jogadores_disponiveis %}
+            <div class="card-footer">
+                <div class="d-grid">
+                    <button id="auto-escolher-btn" class="btn btn-outline-primary" onclick="escolherMelhorJogador()">
+                        <i class="fas fa-robot"></i> Escolher Melhor Disponível
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Outros Times -->
+{% if times %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Progresso dos Times</h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="times-container">
+                    {% for outro_time in times %}
+                    <div class="col-md-6 col-lg-3 mb-3" id="time-{{ outro_time.id }}">
+                        <div class="card time-card h-100" style="border-left-color: {{ outro_time.cor }};">
+                            <div class="card-header" style="background-color: {{ outro_time.cor }}; color: white;">
+                                <h6 class="mb-0">
+                                    {{ outro_time.nome }}
+                                    <br><small class="small">
+                                            (
+                                            {% if outro_time.capitao %}
+                                                <a href="{{ url_for('ver_jogador', id=outro_time.capitao.id) }}" class="text-white">
+                                                    {{ outro_time.capitao.nome }}
+                                                </a>
+                                            {% else %}
+                                                Sem capitão
+                                            {% endif %}
+                                            )
+                                        </small>
+                                </h6>
+                            </div>
+                            <div class="card-body p-3">
+                                {% set escolhas_time = outro_time.escolhas.filter_by(semana_id=semana.id).all() %}
+                                <div class="list-group list-group-flush" id="time-jogadores-{{ outro_time.id }}">
+                                    {% for escolha in escolhas_time %}
+                                    <div class="list-group-item py-2 border-0" id="time-jogador-{{ escolha.jogador.id }}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small>
+                                                <a href="{{ url_for('ver_jogador', id=escolha.jogador.id) }}" class="text-decoration-none">
+                                                    {{ escolha.jogador.nome }}
+                                                </a>
+                                            </small>
+                                            <span class="badge bg-secondary badge-time">R{{ escolha.round_num }}</span>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="text-center mt-3">
+                                    <span class="badge bg-secondary">
+                                        {{ escolhas_time|length }}/{{ semana.max_jogadores_por_time }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- Modal Confirmação -->
+<div class="modal fade" id="confirmacaoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Escolha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja escolher <strong id="jogador-nome-modal"></strong> para o seu time?</p>
+                <p class="text-muted small">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="confirmar-escolha-btn" class="btn btn-success">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variável global para controlar se é minha vez
+let minhaVez = {{ 'true' if minha_vez else 'false' }};
+let socket;
+let semanaId = {{ semana.id }};
+
+$(document).ready(function() {
+    // Conectar ao SocketIO
+    socket = io();
+    
+    // Entrar na sala do draft DA SEMANA ESPECÍFICA
+    socket.emit('join_draft', { 
+        semana_id: semanaId
+    });
+    
+    // Solicitar status inicial
+    setTimeout(() => {
+        socket.emit('request_draft_status', { 
+            semana_id: semanaId
+        });
+    }, 500);
+    
+    // Configurar botões de escolher
+    $(document).on('click', '.escolher-btn', function() {
+        const jogadorId = $(this).data('jogador-id');
+        const jogadorNome = $(this).data('jogador-nome');
+        
+        // Armazena dados temporariamente
+        sessionStorage.setItem('jogadorSelecionadoId', jogadorId);
+        sessionStorage.setItem('jogadorSelecionadoNome', jogadorNome);
+        
+        // Mostra modal
+        $('#jogador-nome-modal').text(jogadorNome);
+        $('#confirmacaoModal').modal('show');
+    });
+    
+    // Confirmar escolha
+    $('#confirmar-escolha-btn').click(function() {
+        const jogadorId = sessionStorage.getItem('jogadorSelecionadoId');
+        const jogadorNome = sessionStorage.getItem('jogadorSelecionadoNome');
+        
+        if (!jogadorId || !jogadorNome) {
+            alert('Erro: Jogador não selecionado.');
+            return;
+        }
+        
+        $('#confirmacaoModal').modal('hide');
+        escolherJogador(jogadorId, jogadorNome);
+    });
+    
+    // Configurar auto-escolher
+    if ($('#auto-escolher-btn').length) {
+        $('#auto-escolher-btn').click(function() {
+            escolherMelhorJogador();
+        });
+    }
+    
+    // Receber atualizações do draft
+    socket.on('draft_status_update', function(data) {
+        console.log('Status atualizado:', data);
+        
+        if (data.semana_id == semanaId) {
+            // Verifica se sou o próximo capitão
+            const souCapitaoAtual = data.vez_capitao_id == {{ current_user.jogador_id }};
+            
+            console.log('Verificando vez:', {
+                'data.vez_capitao_id': data.vez_capitao_id,
+                'current_user.jogador_id': {{ current_user.jogador_id }},
+                'souCapitaoAtual': souCapitaoAtual,
+                'minhaVezAtual': minhaVez
+            });
+            
+            // Atualiza interface
+            atualizarInterfaceDraft(data, souCapitaoAtual);
+            
+            // Se mudou de status, recarrega após delay
+            if (souCapitaoAtual !== minhaVez) {
+                console.log('Status mudou! Recarregando...');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            }
+        }
+    });
+    
+    // Receber atualização quando jogador é escolhido
+    socket.on('player_selected_update', function(data) {
+        console.log('Jogador escolhido:', data);
+        
+        if (data.semana_id == semanaId) {
+            // Remove jogador da lista de disponíveis
+            $(`#jogador-${data.jogador_id}`).fadeOut(300, function() {
+                $(this).remove();
+                atualizarContadorDisponiveis();
+            });
+            
+            // Verifica se sou o próximo capitão
+            if (data.vez_capitao_id == {{ current_user.jogador_id }}) {
+                console.log('Sou o próximo! Aguardando recarregar...');
+                // Não recarrega imediatamente, aguarda atualização de status
+            }
+        }
+    });
+    
+    // Solicitar status periodicamente (a cada 3 segundos)
+    setInterval(function() {
+        if ({{ 'true' if semana.draft_em_andamento else 'false' }}) {
+            socket.emit('request_draft_status', { 
+                semana_id: semanaId
+            });
+        }
+    }, 3000);
+    
+    // Atualizar interface inicial
+    function atualizarInterfaceDraft(data, souCapitaoAtual) {
+        // Atualiza badges
+        $('#rodada-atual').text(data.rodada_atual);
+        $('#escolha-atual').text(data.escolha_atual);
+        
+        if (souCapitaoAtual) {
+            // É minha vez
+            $('#minha-vez-alert').show();
+            $('#nao-minha-vez-alert').hide();
+            $('.escolher-btn').prop('disabled', false).removeClass('disabled');
+        } else {
+            // Não é minha vez
+            $('#minha-vez-alert').hide();
+            $('#nao-minha-vez-alert').show();
+            $('#capitao-atual-nome').text(data.capitao_atual || 'Nenhum');
+            $('.escolher-btn').prop('disabled', true).addClass('disabled');
+        }
+    }
+});
+
+function atualizarContadorDisponiveis() {
+    const count = $('#jogadores-lista .jogador-card').length;
+    $('#contador-disponiveis').text(count);
+    
+    if (count === 0) {
+        $('#jogadores-lista').html(`
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                <p class="text-muted mb-0">Todos os jogadores já foram escolhidos.</p>
+            </div>
+        `);
+    }
+}
+
+function escolherJogador(jogadorId, jogadorNome) {
+    if (!minhaVez) {
+        alert('Não é sua vez de escolher!');
+        return;
+    }
+    
+    // Mostra loading
+    const confirmBtn = $('#confirmar-escolha-btn');
+    const originalText = confirmBtn.html();
+    confirmBtn.html('<span class="spinner-border spinner-border-sm"></span> Escolhendo...');
+    
+    // Desativa todos os botões
+    $('.escolher-btn').prop('disabled', true).addClass('disabled');
+    $('#auto-escolher-btn').prop('disabled', true);
+    
+    // Envia requisição COM semana_id
+    fetch('{{ url_for("capitao_escolher") }}?semana_id=' + semanaId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `jogador_id=${jogadorId}&semana_id=${semanaId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        confirmBtn.html(originalText);
+        
+        if (data.success) {
+            showSuccessMessage(`Jogador ${jogadorNome} escolhido com sucesso!`);
+            
+            // Remove o jogador localmente
+            $(`#jogador-${jogadorId}`).fadeOut(300, function() {
+                $(this).remove();
+                atualizarContadorDisponiveis();
+            });
+            
+            // Atualiza status
+            minhaVez = false;
+            
+            // Se draft finalizado
+            if (data.draft_finalizado) {
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+        } else {
+            alert('Erro: ' + data.message);
+            // Reativa botões
+            $('.escolher-btn').prop('disabled', false).removeClass('disabled');
+            $('#auto-escolher-btn').prop('disabled', false);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        confirmBtn.html(originalText);
+        alert('Erro ao enviar escolha. Tente novamente.');
+        // Reativa botões
+        $('.escolher-btn').prop('disabled', false).removeClass('disabled');
+        $('#auto-escolher-btn').prop('disabled', false);
+    });
+}
+
+function escolherMelhorJogador() {
+    if (!minhaVez || !$('#jogadores-lista .jogador-card').length) {
+        return;
+    }
+    
+    // Pega o primeiro jogador disponível
+    const primeiroJogador = $('#jogadores-lista .jogador-card:first');
+    if (primeiroJogador.length) {
+        const jogadorId = primeiroJogador.data('jogador-id');
+        const jogadorNome = primeiroJogador.find('h6').text();
+        
+        escolherJogador(jogadorId, jogadorNome);
+    }
+}
+
+function showSuccessMessage(message) {
+    // Remove mensagens anteriores
+    $('.alert-success-custom').remove();
+    
+    // Cria nova mensagem
+    const alertDiv = $(`
+        <div class="alert alert-success alert-success-custom alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 1055;">
+            <i class="fas fa-check-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    // Adiciona ao body
+    $('body').append(alertDiv);
+    
+    // Remove após 3 segundos
+    setTimeout(() => {
+        alertDiv.alert('close');
+    }, 3000);
+}
+
+// Limpa dados quando modal é fechado
+$('#confirmacaoModal').on('hidden.bs.modal', function() {
+    sessionStorage.removeItem('jogadorSelecionadoId');
+    sessionStorage.removeItem('jogadorSelecionadoNome');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Editar Recado{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit"></i> Editar Recado: {{ recado.titulo }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('editar_recado', id=recado.id) }}">
+                    <div class="mb-3">
+                        <label for="titulo" class="form-label">Título *</label>
+                        <input type="text" class="form-control" id="titulo" name="titulo" value="{{ recado.titulo }}"
+                            required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="conteudo" class="form-label">Conteúdo *</label>
+                        <textarea class="form-control" id="conteudo" name="conteudo" rows="5"
+                            required>{{ recado.conteudo }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="autor" class="form-label">Autor</label>
+                            <input type="text" class="form-control" id="autor" name="autor" value="{{ recado.autor }}">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="semana_id" class="form-label">Vincular à Semana</label>
+                            <select class="form-select" id="semana_id" name="semana_id">
+                                <option value="">Todas as semanas</option>
+                                {% for semana in semanas_futuras %}
+                                <option value="{{ semana.id }}" {% if recado.semana_id==semana.id %}selected{% endif %}>
+                                    {{ semana.data.strftime('%d/%m/%Y') }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Deixe em branco para mostrar em todas as semanas</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="importante" name="importante" {% if
+                                recado.importante %}checked{% endif %}>
+                            <label class="form-check-label" for="importante">
+                                <i class="fas fa-exclamation-triangle text-danger"></i> Marcar como IMPORTANTE
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ativo" name="ativo" {% if recado.ativo
+                                %}checked{% endif %}>
+                            <label class="form-check-label" for="ativo">
+                                <i class="fas fa-eye"></i> Recado ativo (visível)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <p class="mb-1"><strong>Criado em:</strong> {{ recado.data_publicacao.strftime('%d/%m/%Y %H:%M')
+                            }}</p>
+                        <p class="mb-0"><strong>Status:</strong>
+                            {% if recado.ativo %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_recados') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

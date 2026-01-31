@@ -1,0 +1,812 @@
+{% extends "base.html" %}
+
+{% block title %}Criar Conta - Sistema de Vôlei{% endblock %}
+
+{% block extra_css %}
+<style>
+    .register-container {
+        min-height: calc(100vh - 200px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+    
+    .register-card {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        background: linear-gradient(145deg, #ffffff, #f8f9fa);
+        max-width: 450px;
+        width: 100%;
+    }
+    
+    .card-header-custom {
+        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        padding: 2rem 1.5rem;
+        border-bottom: none;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+    }
+    
+    .card-header-custom::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%231abc9c' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+    
+    .header-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: inline-block;
+        padding: 1rem;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        line-height: 60px;
+    }
+    
+    .form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s;
+        font-size: 1rem;
+    }
+    
+    .form-control:focus {
+        border-color: #2ecc71;
+        box-shadow: 0 0 0 0.25rem rgba(46, 204, 113, 0.25);
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-right: none;
+        border-radius: 10px 0 0 10px;
+    }
+    
+    .form-control.with-icon {
+        border-left: none;
+        border-radius: 0 10px 10px 0;
+    }
+    
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        z-index: 10;
+    }
+    
+    .password-container {
+        position: relative;
+    }
+    
+    .btn-register {
+        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+        width: 100%;
+    }
+    
+    .btn-register:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+    }
+    
+    .login-link {
+        color: #2ecc71;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+    
+    .login-link:hover {
+        color: #27ae60;
+        text-decoration: underline;
+    }
+    
+    /* Progresso do cadastro */
+    .progress-steps {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .progress-steps::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 25px;
+        right: 25px;
+        height: 2px;
+        background: #e9ecef;
+        z-index: 1;
+    }
+    
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        flex: 1;
+    }
+    
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        border: 2px solid white;
+    }
+    
+    .step-number.active {
+        background: #2ecc71;
+        color: white;
+    }
+    
+    .step-number.completed {
+        background: #27ae60;
+        color: white;
+    }
+    
+    .step-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-align: center;
+    }
+    
+    .step.active .step-label {
+        color: #2ecc71;
+        font-weight: 600;
+    }
+    
+    .requirements {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .features {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .feature-icon {
+        color: #2ecc71;
+        font-size: 1.25rem;
+        margin-right: 0.75rem;
+        margin-top: 0.2rem;
+    }
+    
+    @media (max-width: 768px) {
+        .profile-card {
+            margin: 1rem;
+        }
+        
+        .card-header-custom {
+            padding: 1.5rem 1rem;
+        }
+        
+        .header-icon {
+            font-size: 2.5rem;
+            width: 70px;
+            height: 70px;
+            line-height: 50px;
+        }
+        
+        .progress-steps {
+            padding: 0 0.5rem;
+        }
+        
+        .step-label {
+            font-size: 0.7rem;
+        }
+        
+        .photo-preview-container {
+            width: 120px;
+            height: 120px;
+        }
+    }
+    
+    /* Estilo para alertas */
+    .alert-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+    }
+    
+    .requirement-item {
+        transition: color 0.3s;
+    }
+    
+    .requirement-item.valid {
+        color: #2ecc71;
+    }
+    
+    .requirement-item.invalid {
+        color: #e74c3c;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="col-lg-6 col-md-8 col-sm-10">
+        <div class="register-card">
+            <!-- Cabeçalho com gradiente -->
+            <div class="card-header-custom text-white">
+                <div class="header-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <h1 class="h3 mb-2">Crie sua conta</h1>
+                <p class="mb-0 opacity-75">Primeiro passo para se juntar ao time</p>
+            </div>
+            
+            <!-- Progresso do cadastro -->
+            <div class="progress-steps pt-4 px-4">
+                <div class="step active">
+                    <div class="step-number active">1</div>
+                    <div class="step-label">Criar conta</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Perfil do jogador</div>
+                </div>
+            </div>
+            
+            <div class="card-body p-4 p-md-5">
+                <form method="POST" action="{{ url_for('register') }}" id="registerForm" class="needs-validation" novalidate>
+                    
+                    <!-- Nome de Usuário -->
+                    <div class="mb-4">
+                        <label for="username" class="form-label fw-semibold mb-2">
+                            <i class="fas fa-user me-1"></i> usuario *
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control with-icon" 
+                                   id="username" 
+                                   name="username" 
+                                   placeholder="ex: joao.silva"
+                                   required
+                                   autocomplete="username"
+                                   minlength="3">
+                        </div>
+                        <div class="requirements mt-2">
+                            <small>
+                                • Usado para fazer login<br>
+                                • Será convertido para minúsculas automaticamente
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- E-mail (opcional) -->
+                    <div class="mb-4">
+                        <label for="email" class="form-label fw-semibold mb-2">
+                            <i class="fas fa-envelope me-1"></i> E-mail (Opcional)
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-envelope"></i>
+                            </span>
+                            <input type="email" 
+                                   class="form-control with-icon" 
+                                   id="email" 
+                                   name="email" 
+                                   placeholder="ex: joao@email.com"
+                                   autocomplete="email">
+                        </div>
+                        <div class="requirements mt-2">
+                            <small>
+                                • Para recuperação de senha e notificações
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Senha -->
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold mb-2">
+                            <i class="fas fa-lock me-1"></i> Senha *
+                        </label>
+                        <div class="password-container">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" 
+                                       class="form-control with-icon" 
+                                       id="password" 
+                                       name="password" 
+                                       required
+                                       autocomplete="new-password"
+                                       minlength="6">
+                                <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="requirements mt-2">
+                            <small id="password-requirements">
+                                <span id="req-length" class="requirement-item invalid">• Mínimo 6 caracteres</span>
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirmar Senha -->
+                    <div class="mb-4">
+                        <label for="confirm_password" class="form-label fw-semibold mb-2">
+                            <i class="fas fa-lock me-1"></i> Confirmar Senha *
+                        </label>
+                        <div class="password-container">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" 
+                                       class="form-control with-icon" 
+                                       id="confirm_password" 
+                                       name="confirm_password" 
+                                       required
+                                       autocomplete="new-password"
+                                       minlength="6">
+                                <button type="button" class="password-toggle" onclick="togglePassword('confirm_password')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="password-match" class="requirements mt-2">
+                            <small id="match-text" class="requirement-item invalid">• As senhas devem coincidir</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Termos e Condições -->
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                            <label class="form-check-label" for="terms">
+                                Concordo com os 
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" class="text-success fw-semibold">
+                                    Termos de Uso
+                                </a>
+                                e 
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal" class="text-success fw-semibold">
+                                    Política de Privacidade
+                                </a>
+                                *
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Botão de Registro -->
+                    <div class="d-grid mb-4">
+                        <button type="submit" class="btn btn-register text-white py-3">
+                            <i class="fas fa-user-plus me-2"></i> Criar Minha Conta
+                        </button>
+                    </div>
+                    
+                    <!-- Login Link -->
+                    <div class="text-center pt-3">
+                        <p class="mb-0">
+                            Já tem uma conta? 
+                            <a href="{{ url_for('login') }}" class="login-link">
+                                <i class="fas fa-sign-in-alt me-1"></i> Faça Login
+                            </a>
+                        </p>
+                    </div>
+                </form>
+                
+                <!-- Recursos do Sistema -->
+                <div class="features mt-4">
+                    <h6 class="fw-semibold mb-3">
+                        <i class="fas fa-star me-2 text-warning"></i> Etapas do cadastro:
+                    </h6>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle feature-icon"></i>
+                        <div>
+                            <strong>1. Crie sua conta</strong> (você está aqui)
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-arrow-right feature-icon text-info"></i>
+                        <div>
+                            <strong>2. Complete seu perfil</strong> (próxima etapa)
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-user-check feature-icon"></i>
+                        <div>
+                            <strong>3. Confirme presença</strong> nos jogos semanais
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Nota Informativa -->
+                <div class="alert alert-info mt-4 mb-0" role="alert">
+                    <div class="d-flex">
+                        <i class="fas fa-info-circle me-3 mt-1"></i>
+                        <div>
+                            <small>
+                                <strong>Após o registro:</strong> Você será redirecionado para completar seu perfil de jogador com informações adicionais (nome completo, posição, etc.). Este passo é opcional, mas necessário para participar dos jogos.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Container para alertas dinâmicos -->
+<div class="alert-container"></div>
+
+<!-- Modal de Termos de Uso -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="termsModalLabel">
+                    <i class="fas fa-file-contract me-2"></i> Termos de Uso
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Aceitação dos Termos</h6>
+                <p>Ao criar uma conta no Sistema de Vôlei, você concorda com estes termos de uso.</p>
+                
+                <h6>2. Uso da Plataforma</h6>
+                <p>A plataforma deve ser usada para fins de organização de jogos de vôlei, comunicação entre jogadores e gestão de times.</p>
+                
+                <h6>3. Responsabilidades</h6>
+                <p>Você é responsável por manter a confidencialidade de sua senha e por todas as atividades que ocorram em sua conta.</p>
+                
+                <h6>4. Conduta</h6>
+                <p>É proibido o uso da plataforma para qualquer atividade ilegal ou que viole os direitos de outros usuários.</p>
+                
+                <h6>5. Alterações nos Termos</h6>
+                <p>Reservamo-nos o direito de modificar estes termos a qualquer momento.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Política de Privacidade -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="privacyModalLabel">
+                    <i class="fas fa-shield-alt me-2"></i> Política de Privacidade
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Coleta de Informações</h6>
+                <p>Coletamos apenas as informações necessárias para o funcionamento do sistema: nome, e-mail, telefone e dados relacionados à prática esportiva.</p>
+                
+                <h6>2. Uso das Informações</h6>
+                <p>Suas informações são usadas apenas para: organização de jogos, comunicação entre jogadores, formação de times e estatísticas esportivas.</p>
+                
+                <h6>3. Compartilhamento</h6>
+                <p>Não compartilhamos suas informações pessoais com terceiros, exceto quando necessário para o funcionamento do sistema (ex: outros jogadores veem seu nome nas listas).</p>
+                
+                <h6>4. Segurança</h6>
+                <p>Implementamos medidas de segurança para proteger suas informações contra acesso não autorizado.</p>
+                
+                <h6>5. Seus Direitos</h6>
+                <p>Você pode solicitar a exclusão de sua conta e dados a qualquer momento através do administrador do sistema.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Função para mostrar/ocultar senha
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const toggleBtn = field.parentNode.querySelector('.password-toggle');
+    const icon = toggleBtn.querySelector('i');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+// Função para normalizar username para minúsculas
+function normalizeUsername() {
+    const usernameInput = document.getElementById('username');
+    if (usernameInput) {
+        usernameInput.value = usernameInput.value.toLowerCase();
+    }
+}
+
+// Validação de username em tempo real
+function validateUsername(username) {
+    const usernameInput = document.getElementById('username');
+    const errorDiv = document.getElementById('username-error');
+    const requirements = document.getElementById('username-requirements');
+    
+    // Remove espaços e converte para minúsculas
+    username = username.toLowerCase().replace(/\s+/g, '');
+    usernameInput.value = username;
+    
+    // Validações
+    let isValid = true;
+    let errorMessage = '';
+    
+    if (username.length < 3) {
+        isValid = false;
+        errorMessage = '• Mínimo 3 caracteres';
+    } else if (username.length > 30) {
+        isValid = false;
+        errorMessage = '• Máximo 30 caracteres';
+    } else if (username.includes(' ')) {
+        isValid = false;
+        errorMessage = '• Não pode conter espaços';
+    } else if (!/^[a-z0-9._]+$/.test(username)) {
+        isValid = false;
+        errorMessage = '• Use apenas letras, números, . ou _';
+    } else {
+        errorMessage = '• Formato válido ✓';
+    }
+    
+    // Atualiza mensagens
+    if (requirements) {
+        requirements.innerHTML = `
+            <small class="${isValid ? 'text-success' : 'text-danger'}">
+                ${errorMessage}<br>
+                • Será convertido para minúsculas automaticamente<br>
+                • Exemplos: joao, maria.silva, pedro_2024
+            </small>
+        `;
+    }
+    
+    return isValid;
+}
+
+// Modifique o event listener do username
+if (usernameField) {
+    usernameField.addEventListener('input', function(e) {
+        validateUsername(this.value);
+        
+        // Impede digitação de espaços
+        this.value = this.value.toLowerCase().replace(/\s+/g, '');
+    });
+    
+    usernameField.addEventListener('blur', function() {
+        // Remove espaços no início e fim
+        this.value = this.value.trim().toLowerCase();
+        validateUsername(this.value);
+    });
+}
+
+// Adicione esta validação na função de submit do formulário
+if (usernameField.value.trim().length < 3) {
+    showAlert('O nome de usuário deve ter pelo menos 3 caracteres', 'danger');
+    usernameField.focus();
+    isValid = false;
+    firstInvalidField = usernameField;
+} else if (usernameField.value.includes(' ')) {
+    showAlert('O nome de usuário não pode conter espaços! Use um único nome.', 'danger');
+    usernameField.focus();
+    isValid = false;
+    firstInvalidField = usernameField;
+} else if (!/^[a-z0-9._]+$/.test(usernameField.value)) {
+    showAlert('Use apenas letras minúsculas, números, pontos (.) ou underlines (_).', 'danger');
+    usernameField.focus();
+    isValid = false;
+    firstInvalidField = usernameField;
+}
+
+// Validação de senha em tempo real (apenas 6 caracteres)
+function validatePassword(password) {
+    const requirement = document.getElementById('req-length');
+    const isValid = password.length >= 6;
+    
+    if (isValid) {
+        requirement.classList.remove('invalid');
+        requirement.classList.add('valid');
+        requirement.textContent = '• Mínimo 6 caracteres ✓';
+    } else {
+        requirement.classList.remove('valid');
+        requirement.classList.add('invalid');
+        requirement.textContent = '• Mínimo 6 caracteres';
+    }
+    
+    return isValid;
+}
+
+// Validação de confirmação de senha
+function validatePasswordMatch() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const matchText = document.getElementById('match-text');
+    
+    if (confirmPassword === '') {
+        matchText.className = 'requirement-item invalid';
+        matchText.textContent = '• Digite a confirmação da senha';
+        return false;
+    } else if (password === confirmPassword) {
+        matchText.className = 'requirement-item valid';
+        matchText.textContent = '• As senhas coincidem ✓';
+        return true;
+    } else {
+        matchText.className = 'requirement-item invalid';
+        matchText.textContent = '• As senhas não coincidem';
+        return false;
+    }
+}
+
+// Função para mostrar alertas
+function showAlert(message, type = 'info') {
+    const alertContainer = document.querySelector('.alert-container');
+    
+    // Criar alerta
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mb-3`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'danger' ? 'exclamation-triangle' : 
+                         type === 'warning' ? 'exclamation-circle' : 
+                         type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Adicionar ao container
+    alertContainer.appendChild(alertDiv);
+    
+    // Remover após 5 segundos
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Validação do formulário
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registerForm');
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirm_password');
+    const usernameField = document.getElementById('username');
+    const termsCheckbox = document.getElementById('terms');
+    
+    // Normalizar username enquanto digita
+    if (usernameField) {
+        usernameField.addEventListener('input', normalizeUsername);
+    }
+    
+    // Validar senha enquanto digita
+    if (passwordField) {
+        passwordField.addEventListener('input', function() {
+            validatePassword(this.value);
+            validatePasswordMatch();
+        });
+    }
+    
+    // Validar confirmação de senha enquanto digita
+    if (confirmPasswordField) {
+        confirmPasswordField.addEventListener('input', validatePasswordMatch);
+    }
+    
+    // Validação do formulário ao enviar
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        let isValid = true;
+        let firstInvalidField = null;
+        
+        // Validar username
+        if (usernameField.value.trim().length < 3) {
+            showAlert('O nome de usuário deve ter pelo menos 3 caracteres', 'danger');
+            usernameField.focus();
+            isValid = false;
+            firstInvalidField = usernameField;
+        }
+        
+        // Validar senha
+        if (isValid && passwordField.value.length < 6) {
+            showAlert('A senha deve ter pelo menos 6 caracteres', 'danger');
+            passwordField.focus();
+            isValid = false;
+            firstInvalidField = passwordField;
+        }
+        
+        // Validar confirmação de senha
+        if (isValid && passwordField.value !== confirmPasswordField.value) {
+            showAlert('As senhas não coincidem', 'danger');
+            confirmPasswordField.focus();
+            isValid = false;
+            firstInvalidField = confirmPasswordField;
+        }
+        
+        // Validar termos
+        if (isValid && !termsCheckbox.checked) {
+            showAlert('Você deve aceitar os Termos de Uso e Política de Privacidade', 'warning');
+            termsCheckbox.focus();
+            isValid = false;
+            firstInvalidField = termsCheckbox;
+        }
+        
+        // Se todas as validações passarem, enviar formulário
+        if (isValid) {
+            // Mostrar loading
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Criando conta...';
+            submitBtn.disabled = true;
+            
+            // Enviar formulário
+            form.submit();
+        } else if (firstInvalidField) {
+            // Rolagem suave para o campo inválido
+            firstInvalidField.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+    });
+    
+    // Auto-foco no campo de username
+    if (usernameField) {
+        setTimeout(() => {
+            usernameField.focus();
+        }, 300);
+    }
+});
+</script>
+{% endblock %}

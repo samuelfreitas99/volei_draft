@@ -1,0 +1,80 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Novo Ciclo de Mensalidade{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-plus"></i> Novo Ciclo</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('novo_ciclo') }}">
+                    <div class="mb-3">
+                        <label for="data_inicio" class="form-label">Data Início</label>
+                        <input type="date" class="form-control" id="data_inicio" 
+                               name="data_inicio" 
+                               value="{{ data_inicio_sugerida.strftime('%Y-%m-%d') }}" required>
+                        <div class="form-text">Primeiro dia do ciclo</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="data_fim" class="form-label">Data Fim</label>
+                        <input type="date" class="form-control" id="data_fim" 
+                               name="data_fim" 
+                               value="{{ data_fim_sugerida.strftime('%Y-%m-%d') }}" required>
+                        <div class="form-text">Último dia do ciclo</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição (opcional)</label>
+                        <input type="text" class="form-control" id="descricao" 
+                               name="descricao" 
+                               placeholder="Ex: Ciclo Janeiro 2026">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Informações:</h6>
+                        <ul class="mb-0">
+                            <li>Este ciclo será usado como referência para mensalidades</li>
+                            <li>Será automaticamente ativado ao ser criado</li>
+                            <li>Pode ser alterado ou desativado posteriormente</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_ciclos') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Criar Ciclo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Calcula data de fim automaticamente quando data de início é alterada
+    $('#data_inicio').change(function() {
+        if ($(this).val() && !$('#data_fim').val()) {
+            // Sugere 30 dias após a data de início
+            const dataInicio = new Date($(this).val());
+            const dataFim = new Date(dataInicio);
+            dataFim.setDate(dataFim.getDate() + 30);
+            
+            // Formata para YYYY-MM-DD
+            const ano = dataFim.getFullYear();
+            const mes = String(dataFim.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataFim.getDate()).padStart(2, '0');
+            
+            $('#data_fim').val(`${ano}-${mes}-${dia}`);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Editar Chave PIX{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit"></i> Editar Chave PIX
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('editar_pix', id=pix.id) }}">
+                    <div class="mb-3">
+                        <label for="chave_pix" class="form-label">Chave PIX *</label>
+                        <input type="text" class="form-control" id="chave_pix" name="chave_pix"
+                            value="{{ pix.chave_pix }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tipo_chave" class="form-label">Tipo de Chave *</label>
+                        <select class="form-select" id="tipo_chave" name="tipo_chave" required>
+                            <option value="cpf" {% if pix.tipo_chave=='cpf' %}selected{% endif %}>CPF/CNPJ</option>
+                            <option value="email" {% if pix.tipo_chave=='email' %}selected{% endif %}>E-mail</option>
+                            <option value="telefone" {% if pix.tipo_chave=='telefone' %}selected{% endif %}>Telefone
+                            </option>
+                            <option value="aleatoria" {% if pix.tipo_chave=='aleatoria' %}selected{% endif %}>Chave
+                                Aleatória</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nome_recebedor" class="form-label">Nome do Recebedor *</label>
+                            <input type="text" class="form-control" id="nome_recebedor" name="nome_recebedor"
+                                value="{{ pix.nome_recebedor }}" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="cidade_recebedor" class="form-label">Cidade do Recebedor</label>
+                            <input type="text" class="form-control" id="cidade_recebedor" name="cidade_recebedor"
+                                value="{{ pix.cidade_recebedor or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição (Opcional)</label>
+                        <input type="text" class="form-control" id="descricao" name="descricao"
+                            value="{{ pix.descricao or '' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="semana_id" class="form-label">Vincular à Semana</label>
+                        <select class="form-select" id="semana_id" name="semana_id">
+                            <option value="">Todas as semanas</option>
+                            {% for semana in semanas_futuras %}
+                            <option value="{{ semana.id }}" {% if pix.semana_id==semana.id %}selected{% endif %}>
+                                {{ semana.data.strftime('%d/%m/%Y') }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Deixe em branco para mostrar em todas as semanas</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="ativo" name="ativo" {% if pix.ativo
+                                %}checked{% endif %}>
+                            <label class="form-check-label" for="ativo">
+                                <i class="fas fa-eye"></i> Chave ativa (visível)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <p class="mb-1"><strong>Criada em:</strong> {{ pix.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                        <p class="mb-0"><strong>Status:</strong>
+                            {% if pix.ativo %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_pix') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

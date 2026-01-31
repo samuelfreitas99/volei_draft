@@ -1,0 +1,135 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Todas as Semanas{% endblock %}
+
+{% block admin_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Todas as Semanas Futuras</h5>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-light">
+            <i class="fas fa-arrow-left"></i> Voltar ao Dashboard
+        </a>
+    </div>
+    <div class="card-body">
+        {% if semanas_com_stats %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Dia</th>
+                        <th>Status</th>
+                        <th>Vagas/Confirmados</th>
+                        <th>Lista Espera</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in semanas_com_stats %}
+                    {% set semana = item.semana %}
+                    <tr class="{% if semana.data == hoje %}table-info{% endif %}">
+                        <td>
+                            <strong>{{ format_date(semana.data) }}</strong>
+                            <br>
+                            <small class="text-muted">{{ semana.descricao }}</small>
+                            {% if semana.data == hoje %}
+                            <br><small class="badge bg-primary">HOJE</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set dias_semana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'] %}
+                            <span class="badge {% if semana.data.weekday() == 3 %}bg-success{% else %}bg-info{% endif %}">
+                                {{ dias_semana[semana.data.weekday()] }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if semana.lista_aberta %}
+                            <span class="badge bg-success">Lista Aberta</span>
+                            {% elif semana.lista_encerrada and not semana.draft_em_andamento %}
+                            <span class="badge bg-warning">Lista Fechada</span>
+                            {% elif semana.draft_em_andamento %}
+                            <span class="badge bg-primary">Draft em Andamento</span>
+                            {% elif semana.draft_finalizado %}
+                            <span class="badge bg-dark">Draft Finalizado</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Não Iniciada</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                {% set percentual = (item.confirmados / item.total_vagas * 100) if item.total_vagas > 0 else 0 %}
+                                <div class="progress-bar {% if percentual >= 100 %}bg-success{% else %}bg-info{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ percentual }}%"
+                                     aria-valuenow="{{ item.confirmados }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="{{ item.total_vagas }}">
+                                    {{ item.confirmados }}/{{ item.total_vagas }}
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ "%.0f"|format(percentual) }}% completo</small>
+                        </td>
+                        <td>
+                            {% if item.lista_espera > 0 %}
+                            <span class="badge bg-warning">{{ item.lista_espera }} pessoa(s)</span>
+                            {% else %}
+                            <span class="badge bg-secondary">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('admin_dashboard', semana_id=semana.id) }}" 
+                                   class="btn btn-outline-primary" title="Gerenciar">
+                                    <i class="fas fa-tasks"></i>
+                                </a>
+                                <a href="{{ url_for('configurar_semana', id=semana.id) }}" 
+                                   class="btn btn-outline-secondary" title="Configurar">
+                                    <i class="fas fa-cog"></i>
+                                </a>
+                                {% if semana.draft_finalizado %}
+                                <a href="{{ url_for('gerenciar_times') }}?semana_id={{ semana.id }}" 
+                                   class="btn btn-outline-success" title="Ver Times">
+                                    <i class="fas fa-users"></i>
+                                </a>
+                                {% endif %}
+                                {% if semana.draft_em_andamento %}
+                                <a href="{{ url_for('visualizar_draft') }}?semana_id={{ semana.id }}" 
+                                   class="btn btn-outline-info" title="Ver Draft">
+                                    <i class="fas fa-list-ol"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <h6><i class="fas fa-info-circle"></i> Legenda:</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <span class="badge bg-success me-2">Quinta</span> Dia principal de vôlei
+                </div>
+                <div class="col-md-4">
+                    <span class="badge bg-info me-2">Outros dias</span> Dias alternativos
+                </div>
+                <div class="col-md-4">
+                    <span class="badge bg-primary me-2">HOJE</span> Data atual
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h5>Nenhuma semana futura encontrada</h5>
+            <p class="text-muted">Configure os dias de vôlei nas configurações globais.</p>
+            <a href="{{ url_for('admin_configuracoes') }}" class="btn btn-primary">
+                <i class="fas fa-cog"></i> Ir para Configurações
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

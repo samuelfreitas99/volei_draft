@@ -1,0 +1,445 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Editar Usuário - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_jogadores') }}">Jogadores</a></li>
+                    <li class="breadcrumb-item active">Editar Usuário</li>
+                </ol>
+            </nav>
+            <h1 class="h2 mb-0">
+                <i class="fas fa-user-edit text-primary me-2"></i>Editar Usuário
+            </h1>
+        </div>
+        <div>
+            <a href="{{ url_for('admin_jogadores') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show mb-4">
+                    <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Informações do Jogador -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-user me-2"></i>Informações do Jogador
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-2 text-center mb-3">
+                    {% if jogador.foto_perfil %}
+                        <img src="{{ jogador.foto_perfil }}" alt="{{ jogador.nome }}" 
+                             class="img-fluid rounded-circle border" style="width: 120px; height: 120px; object-fit: cover;">
+                    {% else %}
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" 
+                             style="width: 120px; height: 120px;">
+                            <i class="fas fa-user fa-3x text-secondary"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small mb-1">Nome Completo</label>
+                            <p class="fw-bold h5">{{ jogador.nome }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small mb-1">Apelido</label>
+                            <p class="fw-bold">{{ jogador.apelido or 'Não informado' }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small mb-1">Telefone</label>
+                            <p class="fw-bold">{{ jogador.telefone or 'Não informado' }}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small mb-1">Status</label>
+                            <span class="badge {% if jogador.ativo %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ 'Ativo' if jogador.ativo else 'Inativo' }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small mb-1">Mensalista</label>
+                            <span class="badge {% if jogador.mensalista %}bg-primary{% else %}bg-secondary{% endif %}">
+                                {{ 'Sim' if jogador.mensalista else 'Não' }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small mb-1">Capitão</label>
+                            <span class="badge {% if jogador.capitao %}bg-warning{% else %}bg-secondary{% endif %}">
+                                {{ 'Sim' if jogador.capitao else 'Não' }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small mb-1">Cadastrado em</label>
+                            <p class="mb-0">{{ jogador.data_cadastro|format_date if jogador.data_cadastro else 'Não informado' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário de Edição do Usuário -->
+    <div class="card shadow">
+        <div class="card-header bg-info text-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-user-cog me-2"></i>Dados de Acesso do Usuário
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if jogador.user %}
+                <form method="POST" action="{{ url_for('admin_editar_usuario', id=jogador.id) }}" id="editarUsuarioForm">
+                    <!-- Informações Atuais -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex">
+                            <i class="fas fa-info-circle fa-2x me-3 mt-1"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">Informações Atuais</h6>
+                                <p class="mb-1"><strong>Usuário:</strong> {{ jogador.user.username }}</p>
+                                <p class="mb-1"><strong>Permissão:</strong> 
+                                    <span class="badge {% if jogador.user.role == 'admin' %}bg-danger{% elif jogador.user.role == 'capitao' %}bg-warning{% else %}bg-success{% endif %}">
+                                        {{ jogador.user.role|title }}
+                                    </span>
+                                </p>
+                                <p class="mb-0"><strong>Último login:</strong> 
+                                    {{ jogador.user.last_login|format_date('%d/%m/%Y %H:%M') if jogador.user.last_login else 'Nunca' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Novo Username -->
+                    <div class="mb-4">
+                        <label for="novo_username" class="form-label fw-semibold">
+                            <i class="fas fa-user me-2 text-primary"></i>Novo Nome de Usuário
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-at"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="novo_username" 
+                                   name="novo_username" 
+                                   value="{{ jogador.user.username }}"
+                                   placeholder="Digite o novo nome de usuário"
+                                   required>
+                        </div>
+                        <div class="form-text text-muted mt-2">
+                            <small>
+                                • Não pode conter espaços<br>
+                                • Use apenas letras minúsculas, números, pontos (.) ou underlines (_)<br>
+                                • Mínimo 3 caracteres, máximo 30
+                            </small>
+                        </div>
+                        <div id="username-validation" class="mt-2"></div>
+                    </div>
+
+                    <!-- Permissão (Role) -->
+                    <div class="mb-4">
+                        <label for="role" class="form-label fw-semibold">
+                            <i class="fas fa-user-tag me-2 text-primary"></i>Permissão de Acesso
+                        </label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="jogador" {% if jogador.user.role == 'jogador' %}selected{% endif %}>
+                                Jogador (Acesso básico)
+                            </option>
+                            <option value="capitao" {% if jogador.user.role == 'capitao' %}selected{% endif %}>
+                                Capitão (Pode gerenciar times)
+                            </option>
+                            <option value="admin" {% if jogador.user.role == 'admin' %}selected{% endif %}>
+                                Administrador (Acesso total)
+                            </option>
+                        </select>
+                        <div class="form-text text-muted mt-2">
+                            <small>
+                                • <strong>Jogador:</strong> Apenas confirma presença e vê estatísticas<br>
+                                • <strong>Capitão:</strong> Gerencia times durante o draft<br>
+                                • <strong>Administrador:</strong> Acesso total ao sistema
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Reset de Senha -->
+                    <div class="mb-4">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning bg-opacity-10 py-2">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-key me-2 text-warning"></i>Redefinir Senha
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="reset_password" name="reset_password">
+                                    <label class="form-check-label" for="reset_password">
+                                        <strong>Redefinir senha do usuário</strong>
+                                    </label>
+                                </div>
+                                <div id="nova_senha_container" class="collapse">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="nova_senha" class="form-label">Nova Senha</label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="nova_senha" 
+                                                       name="nova_senha"
+                                                       placeholder="Deixe em branco para gerar automaticamente">
+                                                <button class="btn btn-outline-secondary" type="button" id="toggle_nova_senha">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="confirmar_nova_senha" class="form-label">Confirmar Nova Senha</label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="confirmar_nova_senha" 
+                                                       name="confirmar_nova_senha"
+                                                       placeholder="Confirme a nova senha">
+                                                <button class="btn btn-outline-secondary" type="button" id="toggle_confirmar_senha">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted mt-2">
+                                        <small>
+                                            • Se deixar em branco, uma senha aleatória será gerada<br>
+                                            • Mínimo 6 caracteres<br>
+                                            • A nova senha será exibida uma vez após a alteração
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between mt-4 pt-4 border-top">
+                        <button type="button" class="btn btn-outline-danger" 
+                                data-bs-toggle="modal" data-bs-target="#removerUsuarioModal"
+                                {% if not jogador.user %}disabled{% endif %}>
+                            <i class="fas fa-user-slash me-2"></i>Remover Usuário
+                        </button>
+                        
+                        <div>
+                            <a href="{{ url_for('admin_jogadores') }}" class="btn btn-secondary me-2">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% else %}
+                <!-- Usuário não existe - Criar um -->
+                <div class="alert alert-warning">
+                    <div class="d-flex">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3 mt-1"></i>
+                        <div>
+                            <h5 class="alert-heading mb-3">Este jogador não tem um usuário vinculado!</h5>
+                            <p class="mb-3">Para que o jogador possa acessar o sistema, é necessário criar uma conta de usuário.</p>
+                            <a href="{{ url_for('admin_criar_usuario_para_jogador', jogador_id=jogador.id) }}" 
+                               class="btn btn-success">
+                                <i class="fas fa-user-plus me-2"></i>Criar Usuário para {{ jogador.nome }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Remover Usuário -->
+<div class="modal fade" id="removerUsuarioModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Remoção
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">Atenção! Esta ação é irreversível.</h6>
+                    <p class="mb-0">
+                        Você está prestes a remover o acesso do usuário <strong>{{ jogador.user.username }}</strong>. 
+                        O jogador <strong>{{ jogador.nome }}</strong> continuará no sistema, mas perderá o acesso à plataforma.
+                    </p>
+                </div>
+                <p class="mb-0">Deseja continuar?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <a href="{{ url_for('admin_remover_usuario', id=jogador.user.id) }}" class="btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>Sim, Remover Usuário
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Validação de username em tempo real
+    document.getElementById('novo_username').addEventListener('input', function(e) {
+        const username = this.value.toLowerCase().replace(/\s+/g, '');
+        this.value = username;
+        
+        const validationDiv = document.getElementById('username-validation');
+        
+        if (username.length < 3) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Mínimo 3 caracteres</small>';
+        } else if (username.length > 30) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Máximo 30 caracteres</small>';
+        } else if (username.includes(' ')) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Não pode conter espaços</small>';
+        } else if (!/^[a-z0-9._]+$/.test(username)) {
+            validationDiv.innerHTML = '<small class="text-danger">❌ Use apenas letras, números, . ou _</small>';
+        } else {
+            validationDiv.innerHTML = '<small class="text-success">✓ Formato válido</small>';
+        }
+    });
+
+    // Mostrar/ocultar campo de nova senha
+    document.getElementById('reset_password').addEventListener('change', function() {
+        const container = document.getElementById('nova_senha_container');
+        if (this.checked) {
+            container.classList.add('show');
+        } else {
+            container.classList.remove('show');
+        }
+    });
+
+    // Alternar visibilidade das senhas
+    document.getElementById('toggle_nova_senha').addEventListener('click', function() {
+        const input = document.getElementById('nova_senha');
+        const icon = this.querySelector('i');
+        togglePasswordVisibility(input, icon);
+    });
+
+    document.getElementById('toggle_confirmar_senha').addEventListener('click', function() {
+        const input = document.getElementById('confirmar_nova_senha');
+        const icon = this.querySelector('i');
+        togglePasswordVisibility(input, icon);
+    });
+
+    function togglePasswordVisibility(input, icon) {
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    // Validação do formulário
+    document.getElementById('editarUsuarioForm').addEventListener('submit', function(e) {
+        const username = document.getElementById('novo_username').value;
+        const resetPassword = document.getElementById('reset_password').checked;
+        const novaSenha = document.getElementById('nova_senha').value;
+        const confirmarSenha = document.getElementById('confirmar_nova_senha').value;
+        
+        // Validação do username
+        if (username.length < 3) {
+            e.preventDefault();
+            alert('O nome de usuário deve ter pelo menos 3 caracteres.');
+            return false;
+        }
+        
+        if (username.includes(' ')) {
+            e.preventDefault();
+            alert('O nome de usuário não pode conter espaços.');
+            return false;
+        }
+        
+        if (!/^[a-z0-9._]+$/.test(username)) {
+            e.preventDefault();
+            alert('Use apenas letras minúsculas, números, pontos (.) ou underlines (_).');
+            return false;
+        }
+        
+        // Validação da senha se estiver resetando
+        if (resetPassword && novaSenha) {
+            if (novaSenha.length < 6) {
+                e.preventDefault();
+                alert('A nova senha deve ter pelo menos 6 caracteres.');
+                return false;
+            }
+            
+            if (novaSenha !== confirmarSenha) {
+                e.preventDefault();
+                alert('As senhas não coincidem.');
+                return false;
+            }
+        }
+        
+        return true;
+    });
+</script>
+
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .card-header {
+        border-bottom: none;
+    }
+    
+    .form-text small {
+        line-height: 1.4;
+    }
+    
+    .badge {
+        font-size: 0.85em;
+        padding: 0.35em 0.65em;
+    }
+    
+    /* Animação suave para o collapse */
+    .collapse {
+        transition: height 0.3s ease;
+    }
+    
+    /* Estilo para os botões de mostrar/ocultar senha */
+    .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: white;
+    }
+</style>
+{% endblock %}

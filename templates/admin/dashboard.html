@@ -1,0 +1,1154 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}Dashboard Admin{% endblock %}
+
+{% block admin_content %}
+<!-- CSS Externo -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+
+<!-- CSS de correções específicas -->
+<style>
+        /* Menu Mobile Estilizado */
+    .mobile-nav-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .mobile-nav-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        background: white;
+        color: #333;
+        text-decoration: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        position: relative;
+        cursor: pointer;
+    }
+    
+    .mobile-nav-item.active {
+        background: #e7f1ff;
+        color: #0d6efd;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .mobile-nav-item:hover:not(.dropdown-toggle) {
+        background: #f8f9fa;
+        color: #0d6efd;
+    }
+    
+    .mobile-nav-item.dropdown-toggle {
+        background: #f8f9fa;
+    }
+    
+    .mobile-nav-item.dropdown-toggle[aria-expanded="true"] {
+        background: #e9ecef;
+    }
+    
+    .mobile-nav-item.dropdown-toggle[aria-expanded="true"] .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+    
+    .mobile-nav-item i:first-child {
+        width: 20px;
+        text-align: center;
+    }
+    
+    /* Submenu Mobile */
+    .mobile-submenu {
+        background: #f1f5f9;
+        padding: 0.5rem 0;
+    }
+    
+    .mobile-submenu-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1.25rem 0.75rem 3rem;
+        color: #495057;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+    
+    .mobile-submenu-item:hover {
+        background: #e9ecef;
+        color: #0d6efd;
+        border-left-color: #0d6efd;
+    }
+    
+    .mobile-submenu-item i {
+        font-size: 0.85rem;
+        width: 20px;
+        text-align: center;
+    }
+    
+    /* Transição suave para dropdowns */
+    .mobile-dropdown .collapse {
+        transition: all 0.3s ease;
+    }
+    
+    /* Ajustes para melhor visualização */
+    .mobile-dropdown .mobile-nav-item {
+        padding-right: 3rem;
+    }
+    
+    .mobile-nav-item .fa-chevron-down {
+        transition: transform 0.3s ease;
+        font-size: 0.8rem;
+        position: absolute;
+        right: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    /* Ajuste para accordion button */
+    .accordion-button {
+        font-weight: 600;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background-color: #e7f1ff;
+        color: #0d6efd;
+    }
+    
+    /* Indicador visual para itens ativos */
+    .mobile-nav-item.active::after {
+        content: '';
+        position: absolute;
+        right: 1rem;
+        width: 8px;
+        height: 8px;
+        background: #0d6efd;
+        border-radius: 50%;
+    }
+    /* Container principal do admin */
+    .admin-content {
+        padding: 15px;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    @media (min-width: 1200px) {
+        .admin-content {
+            padding: 20px 30px;
+        }
+    }
+    
+    /* Garantir que o dropdown não seja cortado */
+    .admin-main-nav .dropdown-menu {
+        position: absolute !important;
+        z-index: 1050 !important;
+        margin-top: 0.25rem !important;
+        transform: translateX(0) !important;
+        left: 0 !important;
+        right: auto !important;
+        min-width: 220px !important;
+        max-height: 400px !important;
+        overflow-y: auto !important;
+        background: white !important;
+        border: 1px solid rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175) !important;
+    }
+    
+    /* Forçar background branco em todos os cards */
+    .content-card,
+    .semana-opcao,
+    .team-card,
+    .lista-espera-item,
+    .mensalista-item {
+        background: #ffffff !important;
+    }
+    
+    /* Melhoria específica para semana atual no mobile */
+    @media (max-width: 768px) {
+        .semana-atual-card {
+            padding: 1.25rem !important;
+        }
+        
+        .semana-atual-card h4 {
+            font-size: 1.4rem !important;
+            margin-bottom: 0.75rem !important;
+            line-height: 1.3 !important;
+        }
+        
+        .semana-atual-card .d-flex.gap-2 {
+            justify-content: flex-start !important;
+            flex-wrap: wrap !important;
+            gap: 0.5rem !important;
+        }
+        
+        .semana-atual-card .badge {
+            margin-bottom: 0.25rem !important;
+            display: inline-block !important;
+            font-size: 0.85rem !important;
+            padding: 0.4rem 0.7rem !important;
+        }
+        
+        /* Configurações da semana no mobile */
+        .content-card .card-header .d-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 0.75rem;
+        }
+        
+        .content-card .card-header .btn-sm {
+            align-self: stretch;
+            justify-content: center;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .semana-atual-card {
+            padding: 1rem !important;
+        }
+        
+        .semana-atual-card h4 {
+            font-size: 1.2rem !important;
+        }
+        
+        .semana-atual-card .badge {
+            font-size: 0.75rem !important;
+            padding: 0.35rem 0.6rem !important;
+            margin: 0.15rem !important;
+        }
+    }
+</style>
+
+<div class="admin-content">
+    {% set total_vagas = semana.max_times * semana.max_jogadores_por_time %}
+    {% set percentual_confirmados = (confirmados / total_vagas * 100) if total_vagas > 0 else 0 %}
+
+    <!-- Menu Principal de Navegação CORRIGIDO -->
+    <div class="admin-main-nav mb-4">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center mb-3 mb-md-0">
+                <div class="nav-icon me-3">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0">Painel Administrativo</h4>
+                    <small class="opacity-75">Gerencie todas as funcionalidades do sistema</small>
+                </div>
+            </div>
+            
+            <!-- Menu Desktop - COM ITENS SEPARADOS -->
+            <div class="d-none d-md-flex flex-wrap gap-2 align-items-center admin-desktop-menu">
+                <!-- Links diretos (não dropdown) -->
+                <a href="{{ url_for('admin_dashboard') }}" class="nav-link active">
+                    <i class="fas fa-home me-1"></i>Dashboard
+                </a>
+                
+                <a href="{{ url_for('admin_mensalidades') }}" class="nav-link">
+                    <i class="fas fa-calendar-check me-1"></i>Mensalidades
+                </a>
+                
+                <a href="{{ url_for('admin_recados') }}" class="nav-link">
+                    <i class="fas fa-bullhorn me-1"></i>Recados
+                </a>
+                
+                <a href="{{ url_for('admin_pix') }}" class="nav-link">
+                    <i class="fas fa-qrcode me-1"></i>PIX
+                </a>
+                
+                <!-- Dropdown para Jogadores -->
+                <div class="dropdown">
+                    <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" 
+                            aria-expanded="false" id="dropdownJogadores">
+                        <i class="fas fa-users me-1"></i>Jogadores
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownJogadores">
+                        <li><a class="dropdown-item" href="{{ url_for('admin_jogadores') }}">Listar Jogadores</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('novo_jogador') }}">Novo Jogador</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin_usuarios') }}">Usuarios</a></li>
+                        
+
+                    </ul>
+                </div>
+                
+                <!-- Dropdown para Semanas -->
+                <div class="dropdown">
+                    <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                            aria-expanded="false" id="dropdownSemanas">
+                        <i class="fas fa-calendar-alt me-1"></i>Semanas
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownSemanas">
+                        <li><a class="dropdown-item" href="{{ url_for('admin_todas_semanas') }}">Todas as Semanas</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin_semanas') }}?filtro_status=abertas">Abertas</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin_semanas') }}?filtro_status=draft_andamento">Draft em Andamento</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Dropdown para Configurações -->
+                <div class="dropdown">
+                    <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                            aria-expanded="false" id="dropdownConfig">
+                        <i class="fas fa-cog me-1"></i>Configurações
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownConfig">
+                        <li><a class="dropdown-item" href="{{ url_for('admin_configuracoes') }}">Configurações Globais</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin_ciclos') }}">Ciclos de Mensalidade</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('verificar_capitaes') }}">Verificar Capitães</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Relatórios -->
+            <!-- Dropdown para Relatórios -->
+            <div class="dropdown">
+                <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false" id="dropdownRelatorios">
+                    <i class="fas fa-chart-bar me-1"></i>Relatórios
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownRelatorios">
+                    <li><a class="dropdown-item" href="{{ url_for('relatorio_mensalidades') }}">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Relatório de Mensalidades
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('cofre_principal') }}">
+                        <i class="fas fa-piggy-bank me-2"></i>Cofrinho
+                    </a></li>
+                </ul>
+            </div>
+            </div>
+            
+            <!-- Menu Mobile (Hamburguer) -->
+            <div class="d-md-none w-100">
+                <div class="accordion" id="mobileMenuAccordion">
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#mobileMenuCollapse" aria-expanded="false" aria-controls="mobileMenuCollapse">
+                                <i class="fas fa-bars me-2"></i> Menu de Navegação
+                            </button>
+                        </h2>
+                        <div id="mobileMenuCollapse" class="accordion-collapse collapse" data-bs-parent="#mobileMenuAccordion">
+                            <div class="accordion-body p-0">
+                                <div class="mobile-nav-menu">
+                                    <a href="{{ url_for('admin_dashboard') }}" class="mobile-nav-item active">
+                                        <i class="fas fa-home me-2"></i>Dashboard
+                                    </a>
+                                    <a href="{{ url_for('admin_jogadores') }}" class="mobile-nav-item">
+                                        <i class="fas fa-users me-2"></i>Jogadores
+                                    </a>
+                                    <a href="{{ url_for('admin_mensalidades') }}" class="mobile-nav-item">
+                                        <i class="fas fa-calendar-check me-2"></i>Mensalidades
+                                    </a>
+                                    <a href="{{ url_for('admin_semanas') }}" class="mobile-nav-item">
+                                        <i class="fas fa-calendar-alt me-2"></i>Semanas
+                                    </a>
+                                    <a href="{{ url_for('admin_configuracoes') }}" class="mobile-nav-item">
+                                        <i class="fas fa-cog me-2"></i>Configurações
+                                    </a>
+                                    <a href="{{ url_for('admin_recados') }}" class="mobile-nav-item">
+                                        <i class="fas fa-bullhorn me-2"></i>Recados
+                                    </a>
+                                    <a href="{{ url_for('admin_pix') }}" class="mobile-nav-item">
+                                        <i class="fas fa-qrcode me-2"></i>PIX
+                                    </a>
+                                    <a href="{{ url_for('admin_ciclos') }}" class="mobile-nav-item">
+                                        <i class="fas fa-sync-alt me-2"></i>Ciclos
+                                    </a>
+                                    <a href="{{ url_for('relatorio_mensalidades') }}" class="mobile-nav-item">
+                                        <i class="fas fa-chart-bar me-2"></i>Relatórios
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="dashboard-grid mb-4">
+        <!-- Total de Jogadores -->
+        <div class="stat-card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="card-title">Total Jogadores</div>
+                        <div class="value">{{ total_jogadores }}</div>
+                        <small class="opacity-75">Ativos no sistema</small>
+                    </div>
+                    <i class="fas fa-users icon"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensalidades -->
+        <div class="stat-card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="card-title">Mensalistas Ativos</div>
+                        <div class="value">{{ total_mensalistas }}</div>
+                        <small class="opacity-75">Mensalidades cadastradas</small>
+                    </div>
+                    <i class="fas fa-calendar-check icon"></i>
+                </div>
+            </div>
+            <a href="{{ url_for('admin_mensalidades') }}" class="stretched-link"></a>
+        </div>
+
+        <!-- Capitães -->
+        <div class="stat-card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="card-title">Capitães</div>
+                        <div class="value">{{ total_capitaes }}</div>
+                        <small class="opacity-75">Capitães ativos</small>
+                    </div>
+                    <i class="fas fa-crown icon"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmados Hoje -->
+        <div class="stat-card {% if confirmados >= total_vagas %}bg-success{% else %}bg-warning{% endif %} text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="card-title">Confirmados Hoje</div>
+                        <div class="value">{{ confirmados }}/{{ total_vagas }}</div>
+                        <small class="opacity-75">{{ percentual_confirmados|round(1) }}% das vagas</small>
+                    </div>
+                    <i class="fas fa-clipboard-check icon"></i>
+                </div>
+                <div class="progress progress-thin mt-2">
+                    <div class="progress-bar bg-light" 
+                         role="progressbar" 
+                         style="width: {{ percentual_confirmados }}%">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Principal do Dashboard -->
+    <div class="dashboard-container">
+        <!-- Coluna Principal -->
+        <div class="main-column">
+            <!-- Seletor de Semana Principal -->
+            <div class="content-card mb-4">
+                <div class="card-header">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            <div>
+                                <span class="d-none d-md-inline">Gerenciamento da Semana</span>
+                                <span class="d-md-none">Semana Atual</span>
+                                <div class="small text-muted d-md-none">{{ format_date(semana.data) }}</div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <a href="{{ url_for('configurar_semana', id=semana.id) }}" 
+                               class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+                                <i class="fas fa-cog"></i>
+                                <span class="d-none d-md-inline">Configurar</span>
+                            </a>
+                            <a href="{{ url_for('admin_semanas') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-list me-1"></i>Todas
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Semana Atual -->
+                    <div class="semana-atual-card mb-4">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                            <div class="flex-grow-1">
+                                <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center mb-2 gap-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-calendar-day me-2"></i>
+                                        <h4 class="mb-0">{{ format_date(semana.data) }}</h4>
+                                    </div>
+                                    <span class="badge bg-light text-dark">{{ get_dia_semana(semana.data.weekday()) }}</span>
+                                </div>
+                                
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <!-- Status -->
+                                    <span class="badge {% if semana.lista_aberta %}bg-success{% elif semana.draft_em_andamento %}bg-primary{% elif semana.draft_finalizado %}bg-dark{% else %}bg-secondary{% endif %}">
+                                        {% if semana.lista_aberta %}
+                                        <span class="status-indicator status-open"></span>Lista Aberta
+                                        {% elif semana.draft_em_andamento %}
+                                        <span class="status-indicator status-draft"></span>Draft em Andamento
+                                        {% elif semana.draft_finalizado %}
+                                        <span class="status-indicator status-finished"></span>Draft Finalizado
+                                        {% else %}
+                                        <span class="status-indicator status-closed"></span>Lista Fechada
+                                        {% endif %}
+                                    </span>
+                                    
+                                    <!-- Confirmados -->
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-user-check me-1"></i>{{ confirmados }} confirmados
+                                    </span>
+                                    
+                                    <!-- Vagas -->
+                                    <span class="badge bg-light text-dark">
+                                        {{ total_vagas }} vagas
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Outras Semanas -->
+                    <h6 class="mb-3 text-muted">
+                        <i class="fas fa-exchange-alt me-1"></i>Alternar para outra semana:
+                    </h6>
+                    <div class="semanas-grid">
+                        {% if outras_semanas %}
+                            {% for outra in outras_semanas %}
+                            <div class="semana-opcao {% if outra.id == semana.id %}active{% endif %}" 
+                                 onclick="window.location='{{ url_for('admin_dashboard', semana_id=outra.id) }}'">
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ format_date(outra.data, '%d/%m') }}</div>
+                                    <div class="small text-muted mb-2">{{ get_dia_semana_curto(outra.data.weekday()) }}</div>
+                                    {% if outra.draft_finalizado %}
+                                    <span class="badge-sm bg-success">Finalizado</span>
+                                    {% elif outra.draft_em_andamento %}
+                                    <span class="badge-sm bg-warning">Draft</span>
+                                    {% elif outra.lista_encerrada %}
+                                    <span class="badge-sm bg-secondary">Fechada</span>
+                                    {% else %}
+                                    <span class="badge-sm bg-info">Aberta</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12">
+                                <div class="alert alert-info text-center py-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Nenhuma outra semana disponível
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ações Rápidas da Semana -->
+            <div class="content-card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-bolt me-2"></i>Ações Rápidas da Semana
+                </div>
+                <div class="card-body">
+                    <div class="acoes-grid">
+                        {% if semana.lista_aberta %}
+                        <a href="{{ url_for('fechar_lista', semana_id=semana.id) }}" 
+                           class="btn btn-warning"
+                           onclick="return confirm('Fechar lista de presença para {{ format_date(semana.data) }}?')">
+                            <i class="fas fa-lock me-2"></i>Fechar Lista
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('abrir_lista', semana_id=semana.id) }}" 
+                           class="btn btn-success">
+                            <i class="fas fa-lock-open me-2"></i>Abrir Lista
+                        </a>
+                        {% endif %}
+
+                        {% if not semana.draft_em_andamento and not semana.draft_finalizado and not semana.lista_aberta %}
+                            {% if confirmados >= total_vagas %}
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                    data-bs-target="#configDraftModal">
+                                <i class="fas fa-play me-2"></i>Iniciar Draft
+                            </button>
+                            {% else %}
+                            <button type="button" class="btn btn-primary" disabled 
+                                    title="Necessário {{ total_vagas }} confirmados (atual: {{ confirmados }})">
+                                <i class="fas fa-play me-2"></i>Iniciar Draft
+                            </button>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if semana.draft_em_andamento %}
+                        <a href="{{ url_for('finalizar_draft', semana_id=semana.id) }}" 
+                           class="btn btn-danger"
+                           onclick="return confirm('Finalizar draft para {{ format_date(semana.data) }}?')">
+                            <i class="fas fa-stop me-2"></i>Finalizar Draft
+                        </a>
+                        {% endif %}
+
+                        {% if semana.draft_finalizado %}
+                        <a href="{{ url_for('gerenciar_times', semana_id=semana.id) }}" 
+                           class="btn btn-warning">
+                            <i class="fas fa-exchange-alt me-2"></i>Gerenciar Times
+                        </a>
+                        {% endif %}
+
+                        {% if semana.draft_em_andamento or semana.draft_finalizado %}
+                        <a href="{{ url_for('visualizar_draft', semana_id=semana.id) }}" 
+                           class="btn btn-outline-info" target="_blank">
+                            <i class="fas fa-eye me-2"></i>Ver Draft
+                        </a>
+                        {% endif %}
+                        
+                        <button type="button" class="btn btn-outline-danger" 
+                                data-bs-toggle="modal" data-bs-target="#reiniciarModal">
+                            <i class="fas fa-redo me-2"></i>Reiniciar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Espera -->
+            <div class="content-card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-clock me-2"></i>Lista de Espera
+                            <span class="badge bg-dark ms-2">{{ lista_espera|length }}</span>
+                        </div>
+                        <small class="opacity-75">Convidados não cadastrados</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Formulário para adicionar convidados -->
+                    <form method="POST" action="{{ url_for('adicionar_lista_espera_admin') }}" class="mb-4">
+                        <input type="hidden" name="semana_id" value="{{ semana.id }}">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-5">
+                                <input type="text" class="form-control form-control-sm" 
+                                       name="nome" placeholder="Nome completo" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm" 
+                                       name="telefone" placeholder="Telefone (opcional)">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                    <i class="fas fa-plus me-1"></i>Adicionar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-text text-muted small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Apenas para convidados não cadastrados.
+                        </div>
+                    </form>
+
+                    <!-- Lista de convidados -->
+                    {% if lista_espera %}
+                    <div class="scrollable-content">
+                        {% for pessoa in lista_espera %}
+                        <div class="lista-espera-item d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ pessoa.nome }}</div>
+                                <div class="small text-muted">
+                                    {% if pessoa.telefone %}
+                                    <i class="fas fa-phone me-1"></i>{{ pessoa.telefone }}
+                                    {% endif %}
+                                    {% if pessoa.posicao_preferida %}
+                                    <span class="badge-sm bg-info ms-2">
+                                        {{ get_posicao_display(pessoa.posicao_preferida) }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="far fa-clock me-1"></i>{{ pessoa.adicionado_em.strftime('%H:%M') }}
+                                </small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('promover_lista_espera', id=pessoa.id) }}"
+                                   class="btn btn-success" title="Cadastrar como jogador"
+                                   onclick="return confirm('Promover {{ pessoa.nome }} para jogador cadastrado?')">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <span class="d-none d-md-inline ms-1">Cadastrar</span>
+                                </a>
+                                <a href="{{ url_for('remover_lista_espera', id=pessoa.id) }}"
+                                   class="btn btn-danger" title="Remover"
+                                   onclick="return confirm('Remover {{ pessoa.nome }} da lista de espera?')">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Nenhum convidado na lista de espera</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Direita -->
+        <div class="sidebar-column">
+            <!-- Times (se existirem) -->
+            {% if times %}
+            <div class="content-card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-users me-2"></i>Times Formados
+                            <span class="badge bg-light text-dark ms-2">{{ times|length }} times</span>
+                        </div>
+                        {% if semana.draft_finalizado %}
+                        <a href="{{ url_for('gerenciar_times', semana_id=semana.id) }}" 
+                           class="btn btn-sm btn-warning">
+                            <i class="fas fa-exchange-alt me-1"></i>Gerenciar
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="teams-grid">
+                        {% for time in times %}
+                        <div class="team-card">
+                            <div class="card-header" style="background-color: {{ time.cor }}; color: white;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-truncate">
+                                        <h6 class="mb-0">{{ time.nome }}</h6>
+                                        <small class="opacity-75">{{ time.capitao.nome if time.capitao else 'Sem capitão' }}</small>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-light dropdown-toggle" 
+                                                type="button" data-bs-toggle="dropdown">
+                                            {{ time.escolhas.count() }}/{{ semana.max_jogadores_por_time }}
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" 
+                                                   href="{{ url_for('mudar_capitao', time_id=time.id) }}">
+                                                <i class="fas fa-exchange-alt me-2"></i>Mudar Capitão
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body scrollable-content" style="max-height: 200px;">
+                                {% for escolha in time.escolhas %}
+                                <div class="player-item">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 me-2">
+                                            {% if escolha.jogador.foto_perfil %}
+                                            <img src="{{ escolha.jogador.foto_perfil }}" 
+                                                 alt="{{ escolha.jogador.nome }}"
+                                                 class="rounded-circle"
+                                                 style="width: 32px; height: 32px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                                 style="width: 32px; height: 32px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold small">{{ escolha.jogador.nome }}</div>
+                                            {% if escolha.jogador.posicao %}
+                                            <div class="badge-sm bg-secondary">
+                                                {{ get_posicao_display(escolha.jogador.posicao) }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <span class="badge-sm bg-light text-dark">R{{ escolha.round_num }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Mensalistas Não Confirmados -->
+            <div class="content-card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-user-times me-2"></i>Mensalistas Não Confirmados
+                            <span class="badge bg-light text-dark ms-2">{{ mensalistas_nao_confirmados|length }}</span>
+                        </div>
+                        {% if mensalistas_nao_confirmados %}
+                        <button type="button" class="btn btn-sm btn-light" 
+                                onclick="confirmarTodosMensalistas()" 
+                                title="Confirmar todos os mensalistas de uma vez">
+                            <i class="fas fa-check-double"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="mensalista-scroll-container">
+                        {% if mensalistas_nao_confirmados %}
+                        <div class="mensalista-scroll">
+                            {% for jogador in mensalistas_nao_confirmados %}
+                            <div class="mensalista-item">
+                                <div class="flex-shrink-0 me-3">
+                                    {% if jogador.foto_perfil %}
+                                    <img src="{{ jogador.foto_perfil }}" 
+                                         alt="{{ jogador.nome }}"
+                                         class="rounded-circle"
+                                         style="width: 45px; height: 45px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                         style="width: 45px; height: 45px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">{{ jogador.nome }}</div>
+                                    {% if jogador.telefone %}
+                                    <div class="small text-muted">
+                                        <i class="fas fa-phone me-1"></i>{{ jogador.telefone }}
+                                    </div>
+                                    {% endif %}
+                                    {% if jogador.data_fim_mensalidade %}
+                                    <div class="small">
+                                        <span class="badge bg-info">Vence: {{ format_date(jogador.data_fim_mensalidade, '%d/%m') }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <a href="{{ url_for('admin_confirmar_jogador', jogador_id=jogador.id, semana_id=semana.id) }}"
+                                       class="btn btn-sm btn-success"
+                                       title="Confirmar/desconfirmar presença">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="alert alert-warning m-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>{{ mensalistas_nao_confirmados|length }} mensalista(s)</strong> não confirmaram presença.
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                            <p class="text-muted mb-0">Todos os mensalistas confirmaram presença</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botões de ação flutuantes para mobile -->
+    <div class="d-block d-md-none floating-actions">
+        {% if semana.lista_aberta %}
+        <a href="{{ url_for('fechar_lista', semana_id=semana.id) }}" 
+           class="btn btn-warning"
+           onclick="return confirm('Fechar lista de presença?')">
+            <i class="fas fa-lock"></i>
+            <span>Fechar</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('abrir_lista', semana_id=semana.id) }}" 
+           class="btn btn-success">
+            <i class="fas fa-lock-open"></i>
+            <span>Abrir</span>
+        </a>
+        {% endif %}
+        
+        <button type="button" class="btn btn-primary" 
+                onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+            <i class="fas fa-arrow-up"></i>
+            <span>Topo</span>
+        </button>
+    </div>
+
+    <!-- Modais -->
+    {% include 'admin/modais/reiniciar_semana.html' %}
+    {% include 'admin/modais/config_draft.html' %}
+
+    <script>
+        $(document).ready(function() {
+    // Fechar menu mobile ao clicar em um item (exceto dropdowns)
+    $('.mobile-nav-item:not(.dropdown-toggle), .mobile-submenu-item').on('click', function(e) {
+        // Fecha apenas se for link direto (não dropdown toggle)
+        if (!$(this).hasClass('dropdown-toggle')) {
+            $('#mobileMenuCollapse').collapse('hide');
+        }
+    });
+    
+    // Animar setas dos dropdowns
+    $('.mobile-nav-item.dropdown-toggle').on('click', function() {
+        const icon = $(this).find('.fa-chevron-down');
+        icon.toggleClass('rotate');
+    });
+    
+    // Resetar setas quando menu é fechado
+    $('#mobileMenuCollapse').on('hidden.bs.collapse', function() {
+        $('.fa-chevron-down').removeClass('rotate');
+        // Fecha todos os submenus também
+        $('.mobile-dropdown .collapse').collapse('hide');
+    });
+    
+    // Prevenir fechamento ao clicar dentro do submenu
+    $('.mobile-submenu').on('click', function(e) {
+        e.stopPropagation();
+    });
+});
+    $(document).ready(function() {
+        // Atualiza requisitos do draft dinamicamente
+        function atualizarRequisitosDraft() {
+            const maxTimes = parseInt($('#max_times').val());
+            const maxJogadores = parseInt($('#max_jogadores_por_time').val());
+            const totalJogadores = maxTimes * maxJogadores;
+            
+            $('#capitaesNecessarios').text(maxTimes);
+            $('#jogadoresNecessarios').text(totalJogadores);
+            
+            const capitaesOk = {{ total_capitaes }} >= maxTimes;
+            const jogadoresOk = {{ confirmados }} >= totalJogadores;
+            
+            $('#capitaesAtual').toggleClass('text-success', capitaesOk).toggleClass('text-danger', !capitaesOk);
+            $('#jogadoresAtual').toggleClass('text-success', jogadoresOk).toggleClass('text-danger', !jogadoresOk);
+        }
+        
+        $('#max_times, #max_jogadores_por_time').on('change', atualizarRequisitosDraft);
+        atualizarRequisitosDraft();
+        
+        $(document).ready(function() {
+            // Validação do modal de reinício - VERSÃO CORRIGIDA
+            $('#confirmText').on('input', function() {
+                const inputValue = $(this).val().trim().toUpperCase();
+                const confirmBtn = $('#confirmReinicioBtn');
+                const messageDiv = $('#confirmMessage');
+                
+                // Limpa mensagens anteriores
+                messageDiv.hide().removeClass().text('');
+                
+                if (inputValue === 'REINICIAR') {
+                    // Texto correto - habilita botão
+                    confirmBtn.prop('disabled', false);
+                    messageDiv.addClass('alert alert-success')
+                            .html('<i class="fas fa-check-circle me-2"></i>Texto correto! Botão habilitado.')
+                            .show();
+                } else if (inputValue.length > 0) {
+                    // Texto incorreto - mantém botão desabilitado
+                    confirmBtn.prop('disabled', true);
+                    messageDiv.addClass('alert alert-warning')
+                            .html('<i class="fas fa-exclamation-triangle me-2"></i>Digite exatamente: <strong>REINICIAR</strong>')
+                            .show();
+                } else {
+                    // Campo vazio - desabilita botão
+                    confirmBtn.prop('disabled', true);
+                }
+            });
+            
+            // Forçar validação inicial
+            $('#confirmText').trigger('input');
+            
+            // Adicionar verificação ao pressionar Enter
+            $('#confirmText').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    const inputValue = $(this).val().trim().toUpperCase();
+                    if (inputValue === 'REINICIAR' && !$('#confirmReinicioBtn').prop('disabled')) {
+                        e.preventDefault();
+                        $('#confirmReinicioBtn').click();
+                    }
+                }
+            });
+            
+            $('#confirmReinicioBtn').click(function() {
+                const btn = $(this);
+                const originalText = btn.html();
+                
+                btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Reiniciando...');
+                btn.prop('disabled', true);
+                
+                // Fecha o modal
+                $('#reiniciarModal').modal('hide');
+                
+                // Redireciona para reiniciar semana
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("reiniciar_semana", semana_id=semana.id) }}';
+                }, 1000);
+            });
+            
+            // Limpar campo quando modal for fechado
+            $('#reiniciarModal').on('hidden.bs.modal', function() {
+                $('#confirmText').val('');
+                $('#confirmMessage').hide().removeClass().text('');
+                $('#confirmReinicioBtn').prop('disabled', true);
+            });
+        });
+        
+        $('#confirmReinicioBtn').click(function() {
+            const btn = $(this);
+            const originalText = btn.html();
+            
+            btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Reiniciando...');
+            btn.prop('disabled', true);
+            
+            setTimeout(() => {
+                window.location.href = '{{ url_for("reiniciar_semana", semana_id=semana.id) }}';
+            }, 1000);
+        });
+        
+        // Função para confirmar mensalista
+        window.confirmarMensalista = function(jogadorId, semanaId) {
+            if (!confirm('Confirmar presença deste mensalista?')) return;
+            
+            fetch('{{ url_for("confirmar_presenca") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `jogador_id=${jogadorId}&confirmar=true&semana_id=${semanaId}&codigo=confirmar`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Mensalista confirmado!', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('Erro: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('Erro ao confirmar mensalista', 'danger');
+            });
+        };
+        
+        // Confirmar todos os mensalistas
+        window.confirmarTodosMensalistas = function() {
+            if (!confirm('Confirmar TODOS os mensalistas não confirmados?')) return;
+            
+            showToast('Confirmando todos os mensalistas...', 'info');
+            
+            const mensalistasIds = [{% for j in mensalistas_nao_confirmados %}{{ j.id }},{% endfor %}];
+            let confirmados = 0;
+            let total = mensalistasIds.filter(id => id).length;
+            
+            if (total === 0) {
+                showToast('Nenhum mensalista para confirmar', 'warning');
+                return;
+            }
+            
+            mensalistasIds.forEach(id => {
+                if (!id) return;
+                
+                fetch('{{ url_for("confirmar_presenca") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: `jogador_id=${id}&confirmar=true&semana_id={{ semana.id }}&codigo=confirmar`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) confirmados++;
+                });
+            });
+            
+            setTimeout(() => {
+                showToast(`${confirmados} de ${total} mensalistas confirmados!`, 'success');
+                location.reload();
+            }, 2000);
+        };
+        
+        // Função para mostrar toast
+        function showToast(message, type = 'info') {
+            const toast = $(`
+                <div class="toast align-items-center text-bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                                              type === 'danger' ? 'exclamation-circle' : 
+                                              type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+            
+            $('#toastContainer').append(toast);
+            const bsToast = new bootstrap.Toast(toast[0]);
+            bsToast.show();
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        // Inicializar tooltips
+        $('[title]').tooltip();
+        
+        // Ajustar menu mobile para fechar ao clicar em um item
+        $('.mobile-nav-item').on('click', function() {
+            $('#mobileMenuCollapse').collapse('hide');
+        });
+        
+        // Correção específica para dropdowns no menu admin
+        $('.admin-main-nav .dropdown-toggle').on('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        // Prevenir fechamento ao clicar dentro do dropdown
+        $('.admin-main-nav .dropdown-menu').on('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+
+    function prepararReinicio(semanaId) {
+    // Armazena o ID da semana para usar no botão de confirmação
+    sessionStorage.setItem('semanaParaReiniciar', semanaId);
+}
+    document.addEventListener('DOMContentLoaded', function() {
+        const reinicioLink = document.querySelector('a[href*="reiniciar_semana"]');
+        
+        if (reinicioLink) {
+            reinicioLink.addEventListener('click', function(e) {
+                // Mostrar loading no botão
+                const originalHTML = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Reiniciando...';
+                this.classList.add('disabled');
+                
+                // Opcional: mostrar mensagem de sucesso após alguns segundos
+                setTimeout(() => {
+                    if (this.innerHTML.includes('Reiniciando')) {
+                        this.innerHTML = '<i class="fas fa-check me-2"></i> Reiniciado!';
+                    }
+                }, 1500);
+            });
+        }
+        
+        // Feedback quando modal é aberto
+        const modalElement = document.getElementById('reiniciarModal');
+        if (modalElement) {
+            modalElement.addEventListener('show.bs.modal', function() {
+                console.log('Modal de reinício aberto para a semana {{ semana.id }}');
+            });
+        }
+    });
+    // Configurar botão de confirmação
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmBtn = document.getElementById('confirmReinicioBtn');
+        
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                const semanaId = sessionStorage.getItem('semanaParaReiniciar');
+                
+                if (semanaId) {
+                    // Redireciona para a rota de reinício
+                    window.location.href = `/admin/reiniciar_semana?semana_id=${semanaId}`;
+                } else {
+                    alert('Erro: ID da semana não encontrado.');
+                }
+            });
+        }
+    });
+    </script>
+
+    <!-- Container para toasts -->
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;"></div>
+</div>
+{% endblock %}

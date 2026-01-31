@@ -1,0 +1,792 @@
+{% extends "base.html" %}
+
+{% block title %}Times Formados - Histórico{% endblock %}
+
+{% block head %}
+<style>
+    /* Layout principal */
+    .semana-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 24px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+    }
+    
+    .semana-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    
+    /* Cabeçalho da semana */
+    .semana-header {
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        color: white;
+        padding: 20px;
+        position: relative;
+    }
+    
+    .semana-date {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .semana-date i {
+        font-size: 1.2rem;
+    }
+    
+    .semana-desc {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 12px;
+    }
+    
+    .semana-badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 20px;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+    
+    /* Estatísticas da semana */
+    .semana-stats {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+    }
+    
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+    
+    /* Cards de times */
+    .times-container {
+        padding: 20px;
+    }
+    
+    .time-card {
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        overflow: hidden;
+        transition: all 0.2s;
+        margin-bottom: 16px;
+        background: #f8f9fa;
+    }
+    
+    .time-card:hover {
+        border-color: #3498db;
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+    }
+    
+    .time-header {
+        padding: 16px;
+        font-weight: 600;
+        color: white;
+        position: relative;
+    }
+    
+    .time-name {
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .time-capitao {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .jogadores-count {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: rgba(0,0,0,0.2);
+        border-radius: 12px;
+        padding: 4px 10px;
+        font-size: 0.85rem;
+    }
+    
+    /* Lista de jogadores */
+    .jogador-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f1f1f1;
+        background: white;
+    }
+    
+    .jogador-item:last-child {
+        border-bottom: none;
+    }
+    
+    .jogador-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .jogador-foto {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #f1f1f1;
+    }
+    
+    .jogador-detalhes {
+        flex: 1;
+    }
+    
+    .jogador-nome {
+        font-weight: 600;
+        margin-bottom: 2px;
+        color: #2c3e50;
+    }
+    
+    .jogador-apelido {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+    }
+    
+    .jogador-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+    }
+    
+    .escolha-badge {
+        min-width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+    
+    .escolha-badge.capitao {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+    }
+    
+    .posicao-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+    
+    /* Filtros */
+    .filtro-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 24px;
+        border: 1px solid #e9ecef;
+    }
+    
+    /* Estatísticas gerais */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        font-weight: 500;
+    }
+    
+    /* Estado vazio */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 2px dashed #e9ecef;
+        margin: 40px 0;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #bdc3c7;
+        margin-bottom: 20px;
+    }
+    
+    .empty-state h4 {
+        color: #2c3e50;
+        margin-bottom: 12px;
+    }
+    
+    .empty-state p {
+        color: #7f8c8d;
+        max-width: 400px;
+        margin: 0 auto 20px;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .semana-header {
+            padding: 16px;
+        }
+        
+        .semana-date {
+            font-size: 1rem;
+        }
+        
+        .semana-badge {
+            position: relative;
+            top: 0;
+            right: 0;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        
+        .semana-stats {
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .times-container {
+            padding: 16px;
+        }
+        
+        .time-header {
+            padding: 12px;
+        }
+        
+        .jogador-item {
+            padding: 10px;
+        }
+        
+        .jogador-info {
+            gap: 10px;
+        }
+        
+        .jogador-foto {
+            width: 36px;
+            height: 36px;
+        }
+        
+        .filtro-card {
+            padding: 16px;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .time-name {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .jogadores-count {
+            position: relative;
+            top: 0;
+            right: 0;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        
+        .jogador-meta {
+            flex-wrap: wrap;
+        }
+    }
+    
+    /* Botões e ações */
+    .view-draft-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: white;
+        border: 1px solid #3498db;
+        color: #3498db;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+    }
+    
+    .view-draft-btn:hover {
+        background: #3498db;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+    
+    .filtro-btn {
+        width: 100%;
+        padding: 12px;
+    }
+    
+    /* Loading skeleton */
+    .skeleton {
+        animation: skeleton-loading 1.5s infinite;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+    }
+    
+    @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-3 px-md-4">
+    <!-- Cabeçalho -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div>
+                    <h1 class="h2 mb-2">
+                        <i class="fas fa-history text-primary me-2"></i>
+                        Histórico de Times
+                    </h1>
+                    <p class="text-muted mb-0">Veja todos os times formados em cada semana de vôlei</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('draft_publico') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-broadcast-tower me-2"></i>
+                        Draft Ao Vivo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtro-card mb-4">
+        <h5 class="mb-3">
+            <i class="fas fa-filter text-primary me-2"></i>
+            Filtrar Histórico
+        </h5>
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Ano</label>
+                <select name="ano" class="form-select form-select-lg">
+                    <option value="">Todos os anos</option>
+                    {% for ano in anos_disponiveis %}
+                    <option value="{{ ano }}" {% if ano_selecionado == ano %}selected{% endif %}>
+                        {{ ano }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Mês</label>
+                <select name="mes" class="form-select form-select-lg">
+                    <option value="">Todos os meses</option>
+                    {% for mes in meses_disponiveis %}
+                    <option value="{{ mes }}" {% if mes_selecionado == mes %}selected{% endif %}>
+                        {{ mes }}/{{ ano_selecionado if ano_selecionado else '' }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Status</label>
+                <select name="status" class="form-select form-select-lg">
+                    <option value="todos" {% if status_selecionado == 'todos' %}selected{% endif %}>Todos</option>
+                    <option value="finalizados" {% if status_selecionado == 'finalizados' %}selected{% endif %}>Finalizados</option>
+                </select>
+            </div>
+            
+            <div class="col-12 mt-2">
+                <div class="d-flex flex-column flex-md-row gap-3">
+                    <button type="submit" class="btn btn-primary flex-grow-1 py-3 filtro-btn">
+                        <i class="fas fa-search me-2"></i>
+                        Aplicar Filtros
+                    </button>
+                    <a href="{{ url_for('ver_times') }}" class="btn btn-outline-secondary py-3 filtro-btn">
+                        <i class="fas fa-undo me-2"></i>
+                        Limpar Filtros
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Estatísticas Gerais -->
+    {% if semanas_com_times %}
+    <div class="stats-grid mb-4">
+        <div class="stat-card">
+            <div class="stat-number">{{ semanas_com_times|length }}</div>
+            <div class="stat-label">Semanas com Draft</div>
+        </div>
+        
+        {% set total_times = semanas_com_times|sum(attribute='estatisticas.total_times') %}
+        <div class="stat-card">
+            <div class="stat-number">{{ total_times }}</div>
+            <div class="stat-label">Times Formados</div>
+        </div>
+        
+        {% set total_jogadores = semanas_com_times|sum(attribute='estatisticas.total_jogadores') %}
+        <div class="stat-card">
+            <div class="stat-number">{{ total_jogadores }}</div>
+            <div class="stat-label">Jogadores</div>
+        </div>
+        
+        {% set total_semanas = semanas_com_times|length %}
+        <div class="stat-card">
+            <div class="stat-number">{{ total_semanas }}</div>
+            <div class="stat-label">Semanas Registradas</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Lista de Semanas -->
+    {% if semanas_com_times %}
+        {% for item in semanas_com_times %}
+        <div class="semana-card mb-4">
+            <!-- Cabeçalho da Semana -->
+            <div class="semana-header">
+                <div>
+                    <div class="semana-date">
+                        <i class="fas fa-calendar-alt"></i>
+                        {{ item.semana.data|format_date('dddd, DD/MM/YYYY') }}
+                    </div>
+                    
+                    {% if item.semana.descricao %}
+                    <div class="semana-desc">
+                        <i class="fas fa-info-circle me-1"></i>
+                        {{ item.semana.descricao }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="semana-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-users"></i>
+                            {{ item.estatisticas.total_times }} times
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-user-friends"></i>
+                            {{ item.estatisticas.total_jogadores }} jogadores
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            {{ item.semana.created_at|format_date('HH:mm') }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="semana-badge">
+                    <i class="fas fa-check-circle me-1"></i>
+                    Draft Finalizado
+                </div>
+            </div>
+
+            <!-- Times da Semana -->
+            <div class="times-container">
+                <div class="row g-3">
+                    {% for time_info in item.times %}
+                    <div class="col-12 col-lg-6">
+                        <div class="time-card">
+                            <!-- Cabeçalho do Time -->
+                            <div class="time-header" style="background-color: {{ time_info.time.cor }};">
+                                <div class="time-name">
+                                    <span>{{ time_info.time.nome }}</span>
+                                    <span class="jogadores-count">
+                                        {{ time_info.total_jogadores }}/{{ item.semana.max_jogadores_por_time }}
+                                    </span>
+                                </div>
+                                <div class="time-capitao">
+                                    <i class="fas fa-crown"></i>
+                                    {% for capitao in item.estatisticas.capitaes %}
+                                        {% if capitao.id == time_info.time.capitao_id %}
+                                            {{ capitao.nome }}
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Lista de Jogadores -->
+                            <div class="jogadores-list">
+                                {% for jogador_info in time_info.jogadores %}
+                                <div class="jogador-item">
+                                    <div class="jogador-info">
+                                        <span class="escolha-badge {% if jogador_info.round == 0 %}capitao{% endif %}">
+                                            {% if jogador_info.round == 0 %}
+                                                C
+                                            {% else %}
+                                                {{ jogador_info.ordem_escolha }}
+                                            {% endif %}
+                                        </span>
+                                        
+                                        {% if jogador_info.jogador.foto_perfil %}
+                                        <img src="{{ jogador_info.jogador.foto_perfil }}" 
+                                             alt="{{ jogador_info.jogador.nome }}"
+                                             class="jogador-foto"
+                                             onerror="this.style.display='none'">
+                                        {% endif %}
+                                        
+                                        <div class="jogador-detalhes">
+                                            <div class="jogador-nome">
+                                                {{ jogador_info.jogador.nome }}
+                                                {% if jogador_info.jogador.mensalista %}
+                                                <i class="fas fa-star text-warning ms-1" title="Mensalista"></i>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            {% if jogador_info.jogador.apelido %}
+                                            <div class="jogador-apelido">
+                                                "{{ jogador_info.jogador.apelido }}"
+                                            </div>
+                                            {% endif %}
+                                            
+                                            <div class="jogador-meta">
+                                                {% if jogador_info.jogador.posicao %}
+                                                <span class="posicao-badge">
+                                                    {{ jogador_info.jogador.posicao|get_posicao_display }}
+                                                </span>
+                                                {% endif %}
+                                                
+                                                {% if jogador_info.jogador.nivel %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-chart-line me-1"></i>
+                                                    {{ jogador_info.jogador.nivel|get_nivel_display }}
+                                                </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Rodapé da Semana -->
+                <div class="mt-4 pt-3 border-top">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                        <div>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                Realizado em {{ item.semana.created_at|format_date('DD/MM/YYYY HH:mm') }}
+                            </small>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('draft_publico', semana_id=item.semana.id) }}" 
+                               class="view-draft-btn">
+                                <i class="fas fa-external-link-alt"></i>
+                                Ver Detalhes do Draft
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <!-- Estado Vazio -->
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-users-slash"></i>
+        </div>
+        <h4 class="mb-3">Nenhum time formado encontrado</h4>
+        <p class="mb-4">
+            Não há drafts finalizados para os filtros selecionados. 
+            Tente ajustar os filtros ou volte mais tarde para ver os times formados.
+        </p>
+        {% if ano_selecionado or mes_selecionado %}
+        <a href="{{ url_for('ver_times') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-undo me-2"></i>
+            Limpar Filtros
+        </a>
+        {% else %}
+        <a href="{{ url_for('draft_publico') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-broadcast-tower me-2"></i>
+            Ver Draft Atual
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Navegação entre páginas (se houver paginação no futuro) -->
+    {% if semanas_com_times and semanas_com_times|length >= 10 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Navegação de semanas">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Melhorar experiência em dispositivos móveis
+    if (window.innerWidth <= 768) {
+        // Adicionar toggle para expandir/colapsar semanas
+        document.querySelectorAll('.semana-header').forEach(header => {
+            header.style.cursor = 'pointer';
+            
+            header.addEventListener('click', function() {
+                const semanaCard = this.closest('.semana-card');
+                const timesContainer = semanaCard.querySelector('.times-container');
+                
+                if (timesContainer.style.display === 'none') {
+                    timesContainer.style.display = 'block';
+                    this.querySelector('.semana-badge').innerHTML = 
+                        '<i class="fas fa-check-circle me-1"></i> Draft Finalizado';
+                } else {
+                    timesContainer.style.display = 'none';
+                    this.querySelector('.semana-badge').innerHTML = 
+                        '<i class="fas fa-chevron-down me-1"></i> Clique para expandir';
+                }
+            });
+        });
+    }
+    
+    // Atualizar meses quando ano for alterado
+    const anoSelect = document.querySelector('select[name="ano"]');
+    const mesSelect = document.querySelector('select[name="mes"]');
+    
+    if (anoSelect && mesSelect) {
+        anoSelect.addEventListener('change', function() {
+            if (this.value) {
+                // Disparar submit após pequeno delay para melhor UX
+                setTimeout(() => {
+                    this.form.submit();
+                }, 300);
+            }
+        });
+    }
+    
+    // Adicionar feedback visual nos botões
+    document.querySelectorAll('.view-draft-btn, .btn-primary, .btn-outline-secondary').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            // Adicionar efeito de clique
+            this.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+        });
+    });
+    
+    // Melhorar carregamento de imagens
+    document.querySelectorAll('.jogador-foto').forEach(img => {
+        img.addEventListener('error', function() {
+            // Mostrar inicial em vez da imagem quebrada
+            const parent = this.parentElement;
+            const nome = this.alt;
+            const inicial = nome.charAt(0).toUpperCase();
+            
+            const fallback = document.createElement('div');
+            fallback.className = 'jogador-foto d-flex align-items-center justify-content-center';
+            fallback.style.backgroundColor = '#3498db';
+            fallback.style.color = 'white';
+            fallback.style.fontWeight = 'bold';
+            fallback.style.fontSize = '1.2rem';
+            fallback.textContent = inicial;
+            
+            parent.replaceChild(fallback, this);
+        });
+    });
+    
+    // Adicionar animação suave ao rolar
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+    
+    // Observar cards de semanas
+    document.querySelectorAll('.semana-card').forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        card.style.transitionDelay = `${index * 0.1}s`;
+        
+        observer.observe(card);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    container_name: volei-draft-app
+    restart: unless-stopped
+
+    ports:
+      - "3000:5000"
+
+    volumes:
+      - .:/app
+
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-default_secret_key_change_me}
+      PRODUCTION: "false"
+      FLASK_APP: app.py
+      FLASK_ENV: development
+      FLASK_DEBUG: "1"
+
+    command: python app.py
+    stdin_open: true
+    tty: true

@@ -1,0 +1,59 @@
+<!-- Modal de Confirmação Reiniciar Semana - VERSÃO FINAL FUNCIONAL -->
+<div class="modal fade" id="reiniciarModal" tabindex="-1" aria-labelledby="reiniciarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="reiniciarModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Reiniciar Semana
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-circle"></i> ATENÇÃO: Esta ação é IRREVERSÍVEL!</h6>
+                </div>
+                
+                <p>Tem certeza que deseja reiniciar completamente a semana de <strong>{{ format_date(semana.data) }}</strong>?</p>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Detalhes da semana atual:</h6>
+                    <ul class="mb-0">
+                        <li>Times formados: <strong>{{ times|length }}</strong></li>
+                        <li>Jogadores confirmados: <strong>{{ confirmados }}</strong></li>
+                        <li>Convidados em espera: <strong>{{ lista_espera|length }}</strong></li>
+                        {% if semana.draft_em_andamento %}
+                        <li class="text-warning"><i class="fas fa-play-circle"></i> Draft em andamento</li>
+                        {% elif semana.draft_finalizado %}
+                        <li class="text-success"><i class="fas fa-check-circle"></i> Draft finalizado</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <p><strong>Será REMOVIDO permanentemente:</strong></p>
+                <ul>
+                    <li><i class="fas fa-users text-danger"></i> Todos os times formados</li>
+                    <li><i class="fas fa-check-circle text-danger"></i> Todas as confirmações</li>
+                    <li><i class="fas fa-clock text-danger"></i> Lista de espera completa</li>
+                    <li><i class="fas fa-history text-danger"></i> Histórico do draft</li>
+                </ul>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-warning"></i> <strong>Após o reinício:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Lista aberta para novas confirmações</li>
+                        <li>Estado resetado para o início</li>
+                        <li>Necessário iniciar novo draft</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i> Cancelar
+                </button>
+                <a href="{{ url_for('reiniciar_semana', semana_id=semana.id) }}" class="btn btn-danger">
+                    <i class="fas fa-redo me-2"></i> Sim, Reiniciar Agora
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

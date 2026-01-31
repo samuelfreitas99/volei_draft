@@ -1,0 +1,994 @@
+<!-- templates/cofre/cofre_simplificado.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cofrinho do Vôlei</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        
+        .cofre-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .saldo-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--success-color);
+        }
+        
+        .jogador-card {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .jogador-card:hover {
+            border-color: var(--secondary-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .jogador-pago {
+            border-color: var(--success-color) !important;
+            background-color: rgba(39, 174, 96, 0.05);
+        }
+        
+        .jogador-pendente {
+            border-color: var(--warning-color) !important;
+            background-color: rgba(243, 156, 18, 0.05);
+        }
+        
+        .badge-status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .valor-destaque {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--success-color);
+        }
+        
+        .week-selector {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+        
+        .week-card {
+            min-width: 100px;
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            flex-shrink: 0;
+        }
+        
+        .week-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .week-card.active {
+            border-color: var(--secondary-color);
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            font-weight: 600;
+            color: #6c757d;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--secondary-color);
+        }
+        
+        .tab-content {
+            background: white;
+            border-radius: 0 0 10px 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .metodo-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .filtro-rapido {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .valor-destaque {
+                font-size: 1.5rem;
+            }
+            
+            .week-selector {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--primary-color);">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-coin me-2"></i>Cofrinho do Vôlei
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('cofre_principal') }}">
+                            <i class="bi bi-coin me-1"></i>Cofrinho
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">Painel Admin</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Sair</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <div class="container mt-4">
+        <!-- Cabeçalho do Cofre -->
+        <div class="cofre-header text-center">
+            <h1><i class="bi bi-piggy-bank me-2"></i>Cofrinho do Vôlei</h1>
+            <p class="lead">Controle de pagamentos dos jogadores não-mensalistas</p>
+            
+            <!-- Seletor de Semanas -->
+            <div class="week-selector justify-content-center">
+                {% for semana_item in semanas %}
+                <div class="week-card {% if semana_item.semana.id == semana.id %}active{% endif %}" 
+                     onclick="location.href='{{ url_for('cofre_principal', semana_id=semana_item.semana.id) }}'">
+                    <div class="fw-bold">{{ format_date(semana_item.semana.data, '%d/%m') }}</div>
+                    <small>{{ get_dia_semana_curto(semana_item.semana.data.weekday()) }}</small>
+                    <div class="mt-2">
+                        <span class="badge bg-{% if semana_item.total_pagamentos > 0 %}success{% else %}secondary{% endif %}">
+                            {{ semana_item.total_pagamentos }} pagos
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Resumo do Cofre -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="saldo-card">
+                    <h5><i class="bi bi-wallet2 me-2"></i>Saldo Total</h5>
+                    <div class="valor-destaque">R$ {{ "%.2f"|format(saldo_total) }}</div>
+                    <small class="text-muted">Disponível no cofre</small>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="saldo-card">
+                    <h5><i class="bi bi-calendar-check me-2"></i>Esta Semana</h5>
+                    <div class="valor-destaque" style="color: {% if semana_info.arrecadado > 0 %}#27ae60{% else %}#f39c12{% endif %};">
+                        R$ {{ "%.2f"|format(semana_info.arrecadado) }}
+                    </div>
+                    <small class="text-muted">{{ semana_info.pagos }} de {{ semana_info.total }} pagos</small>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="saldo-card">
+                    <h5><i class="bi bi-people me-2"></i>Jogadores</h5>
+                    <div class="valor-destaque" style="color: var(--secondary-color);">
+                        {{ jogadores_cofre|length }}
+                    </div>
+                    <small class="text-muted">Não-mensalistas confirmados</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Abas Principais -->
+        <ul class="nav nav-tabs" id="cofreTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="jogadores-tab" data-bs-toggle="tab" data-bs-target="#jogadores" type="button">
+                    <i class="bi bi-people me-1"></i>Jogadores ({{ jogadores_cofre|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="movimentos-tab" data-bs-toggle="tab" data-bs-target="#movimentos" type="button">
+                    <i class="bi bi-arrow-left-right me-1"></i>Movimentos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="relatorios-tab" data-bs-toggle="tab" data-bs-target="#relatorios" type="button">
+                    <i class="bi bi-bar-chart me-1"></i>Relatórios
+                </button>
+            </li>
+        </ul>
+
+        <!-- Conteúdo das Abas -->
+        <div class="tab-content" id="cofreTabContent">
+            
+            <!-- Aba: Jogadores -->
+            <div class="tab-pane fade show active" id="jogadores" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Jogadores Não-Mensalistas</h4>
+                    <div>
+                        <button class="btn btn-success me-2" onclick="marcarTodosComoPagos()">
+                            <i class="bi bi-check-all me-1"></i>Marcar Todos como Pagos
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="abrirModalValor()">
+                            <i class="bi bi-cash-coin me-1"></i>Alterar Valor
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtros Rápidos -->
+                <div class="filtro-rapido">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Filtrar por Status:</label>
+                            <select class="form-select" id="filtroStatus" onchange="filtrarJogadores()">
+                                <option value="todos">Todos os jogadores</option>
+                                <option value="pago">Pagamentos Confirmados</option>
+                                <option value="pendente">Pagamentos Pendentes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Ordenar por:</label>
+                            <select class="form-select" id="ordenarPor" onchange="ordenarJogadores()">
+                                <option value="nome">Nome</option>
+                                <option value="status">Status Pagamento</option>
+                                <option value="valor">Valor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Valor Padrão (R$):</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" class="form-control" id="valorPadrao" 
+                                       value="{{ valor_padrao }}" step="0.01" min="0" 
+                                       onchange="atualizarValorPadrao()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de Jogadores -->
+                {% if jogadores_cofre %}
+                <div class="row" id="listaJogadores">
+                    {% for jogador in jogadores_cofre %}
+                    <div class="col-md-6 col-lg-4 jogador-item" 
+                         data-status="{{ 'pago' if jogador.pagamento.pago else 'pendente' }}">
+                        <div class="jogador-card {% if jogador.pagamento.pago %}jogador-pago{% else %}jogador-pendente{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {% if jogador.jogador.foto_perfil %}
+                                        <img src="{{ jogador.jogador.foto_perfil }}" alt="{{ jogador.jogador.nome }}" 
+                                             class="rounded-circle me-2" width="30" height="30">
+                                        {% endif %}
+                                        {{ jogador.jogador.nome }}
+                                        {% if jogador.jogador.apelido %}
+                                        <small class="text-muted">({{ jogador.jogador.apelido }})</small>
+                                        {% endif %}
+                                    </h6>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-geo-alt me-1"></i>{{ jogador.time_nome }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="badge-status 
+                                        {% if jogador.pagamento.pago %}bg-success{% else %}bg-warning{% endif %}">
+                                        {% if jogador.pagamento.pago %}
+                                        <i class="bi bi-check-circle me-1"></i>Pago
+                                        {% else %}
+                                        <i class="bi bi-clock me-1"></i>Pendente
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="fw-bold">Valor:</span>
+                                    <div class="input-group input-group-sm" style="width: 130px;">
+                                        <span class="input-group-text">R$</span>
+                                        <input type="number" class="form-control valor-jogador" 
+                                               value="{{ jogador.pagamento.valor }}" 
+                                               data-jogador-id="{{ jogador.jogador.id }}"
+                                               step="0.01" min="0">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label-sm mb-1">Método de Pagamento:</label>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" 
+                                                class="btn btn-sm metodo-btn {% if jogador.pagamento.metodo_pagamento == 'dinheiro' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                                                data-metodo="dinheiro"
+                                                data-jogador-id="{{ jogador.jogador.id }}"
+                                                onclick="selecionarMetodo(this)">
+                                            <i class="bi bi-cash me-1"></i>Dinheiro
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm metodo-btn {% if jogador.pagamento.metodo_pagamento == 'pix' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                                                data-metodo="pix"
+                                                data-jogador-id="{{ jogador.jogador.id }}"
+                                                onclick="selecionarMetodo(this)">
+                                            <i class="bi bi-qr-code me-1"></i>PIX
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm metodo-btn {% if jogador.pagamento.metodo_pagamento == 'cartao' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                                                data-metodo="cartao"
+                                                data-jogador-id="{{ jogador.jogador.id }}"
+                                                onclick="selecionarMetodo(this)">
+                                            <i class="bi bi-credit-card me-1"></i>Cartão
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {% if jogador.pagamento.pago %}
+                                <div class="alert alert-success py-2 mb-3" role="alert">
+                                    <small>
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Pago em {{ format_date(jogador.pagamento.pago_em, '%d/%m %H:%M') }}
+                                        {% if jogador.pagamento.metodo_pagamento %}
+                                        <span class="badge metodo-badge bg-info ms-2">
+                                            {{ jogador.pagamento.metodo_pagamento|title }}
+                                        </span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex justify-content-between">
+                                    {% if not jogador.pagamento.pago %}
+                                    <button class="btn btn-success btn-sm" 
+                                            onclick="marcarComoPago({{ jogador.jogador.id }})">
+                                        <i class="bi bi-check-circle me-1"></i>Marcar como Pago
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-warning btn-sm" 
+                                            onclick="desmarcarPagamento({{ jogador.jogador.id }})">
+                                        <i class="bi bi-x-circle me-1"></i>Desmarcar
+                                    </button>
+                                    {% endif %}
+                                    
+                                    <button class="btn btn-outline-secondary btn-sm" 
+                                            onclick="abrirObservacao({{ jogador.jogador.id }}, '{{ jogador.pagamento.observacao or '' }}')">
+                                        <i class="bi bi-chat-text"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Resumo de Pagamentos -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Resumo de Pagamentos</h5>
+                                <div class="row text-center mb-3">
+                                    <div class="col-4">
+                                        <div class="h4 text-success">{{ semana_info.pagos }}</div>
+                                        <small class="text-muted">Confirmados</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="h4 text-warning">{{ semana_info.pendentes }}</div>
+                                        <small class="text-muted">Pendentes</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="h4 text-primary">{{ jogadores_cofre|length }}</div>
+                                        <small class="text-muted">Total</small>
+                                    </div>
+                                </div>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Dinheiro:</td>
+                                        <td class="text-end">R$ {{ "%.2f"|format(resumo_metodos.dinheiro) }}</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-info">
+                                                {{ ((resumo_metodos.dinheiro / semana_info.arrecadado * 100) if semana_info.arrecadado > 0 else 0)|round }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>PIX:</td>
+                                        <td class="text-end">R$ {{ "%.2f"|format(resumo_metodos.pix) }}</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-info">
+                                                {{ ((resumo_metodos.pix / semana_info.arrecadado * 100) if semana_info.arrecadado > 0 else 0)|round }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cartão:</td>
+                                        <td class="text-end">R$ {{ "%.2f"|format(resumo_metodos.cartao) }}</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-info">
+                                                {{ ((resumo_metodos.cartao / semana_info.arrecadado * 100) if semana_info.arrecadado > 0 else 0)|round }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr class="table-active">
+                                        <td><strong>Total Arrecadado:</strong></td>
+                                        <td class="text-end" colspan="2">
+                                            <strong>R$ {{ "%.2f"|format(semana_info.arrecadado) }}</strong>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">Ações Rápidas</h5>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-success" onclick="marcarTodosComoPagos()">
+                                        <i class="bi bi-check-all me-2"></i>Marcar Todos como Pagos
+                                    </button>
+                                    <button class="btn btn-primary" onclick="gerarRelatorioSemanal()">
+                                        <i class="bi bi-download me-2"></i>Exportar Relatório
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="abrirModalDeposito()">
+                                        <i class="bi bi-plus-circle me-2"></i>Adicionar Dinheiro
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="abrirModalSaque()">
+                                        <i class="bi bi-dash-circle me-2"></i>Retirar Dinheiro
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Não há jogadores não-mensalistas confirmados para esta semana.
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Aba: Movimentos -->
+            <div class="tab-pane fade" id="movimentos" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Movimentações do Cofre</h4>
+                    <div>
+                        <button class="btn btn-success me-2" onclick="abrirModalDeposito()">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar Dinheiro
+                        </button>
+                        <button class="btn btn-danger" onclick="abrirModalSaque()">
+                            <i class="bi bi-dash-circle me-1"></i>Retirar Dinheiro
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Lista de Movimentos -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th class="text-end">Valor</th>
+                                <th>Responsável</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movimento in movimentos %}
+                            <tr>
+                                <td nowrap>
+                                    <small>{{ format_date(movimento.created_at, '%d/%m/%Y %H:%M') }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if movimento.tipo in ['entrada', 'deposito', 'ajuste'] %}success{% else %}danger{% endif %}">
+                                        {{ movimento.tipo|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ movimento.descricao }}
+                                    {% if movimento.observacao %}
+                                    <br><small class="text-muted">{{ movimento.observacao }}</small>
+                                    {% endif %}
+                                    {% if movimento.semana %}
+                                    <br><small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        {{ format_date(movimento.semana.data, '%d/%m/%Y') }}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end fw-bold {% if movimento.tipo in ['entrada', 'deposito', 'ajuste'] %}text-success{% else %}text-danger{% endif %}">
+                                    {% if movimento.tipo in ['entrada', 'deposito', 'ajuste'] %}+{% else %}-{% endif %}
+                                    R$ {{ "%.2f"|format(movimento.valor) }}
+                                </td>
+                                <td>
+                                    <small>{{ movimento.usuario }}</small>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Não há movimentações registradas.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Aba: Relatórios -->
+            <div class="tab-pane fade" id="relatorios" role="tabpanel">
+                <h4 class="mb-4">Relatórios Financeiros</h4>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Últimas Semanas</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Semana</th>
+                                                <th class="text-end">Jogadores</th>
+                                                <th class="text-end">Arrecadado</th>
+                                                <th class="text-end">Pagamentos</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for relatorio in relatorios_semanas[:6] %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ url_for('cofre_principal', semana_id=relatorio.semana.id) }}" 
+                                                       class="text-decoration-none">
+                                                        {{ format_date(relatorio.semana.data, '%d/%m/%Y') }}
+                                                    </a>
+                                                </td>
+                                                <td class="text-end">{{ relatorio.total_jogadores }}</td>
+                                                <td class="text-end fw-bold">R$ {{ "%.2f"|format(relatorio.arrecadado) }}</td>
+                                                <td class="text-end">
+                                                    <span class="badge bg-{% if relatorio.pagos == relatorio.total %}success{% elif relatorio.pagos > 0 %}warning{% else %}secondary{% endif %}">
+                                                        {{ relatorio.pagos }}/{{ relatorio.total }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Métodos de Pagamento</h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Dinheiro:</td>
+                                        <td class="text-end">R$ {{ "%.2f"|format(resumo_metodos.dinheiro) }}</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-info">
+                                                {{ ((resumo_metodos.dinheiro / semana_info.arrecadado * 100) if semana_info.arrecadado > 0 else 0)|round }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>PIX:</td>
+                                        <td class="text-end">R$ {{ "%.2f"|format(resumo_metodos.pix) }}</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-info">
+                                                {{ ((resumo_metodos.pix / semana_info.arrecadado * 100) if semana_info.arrecadado > 0 else 0)|round }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cartão:</td>
+                                        <td class="text-end">R$ {{ "%.2f"|format(resumo_metodos.cartao) }}</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-info">
+                                                {{ ((resumo_metodos.cartao / semana_info.arrecadado * 100) if semana_info.arrecadado > 0 else 0)|round }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                <h6 class="mt-4">Exportar Relatórios</h6>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary" onclick="exportarRelatorioSemanal()">
+                                        <i class="bi bi-download me-2"></i>Relatório desta Semana (CSV)
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="exportarRelatorioMensal()">
+                                        <i class="bi bi-download me-2"></i>Relatório do Mês (CSV)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modais -->
+    {% include 'admin/modais.html' %}
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variáveis globais
+        let semanaId = {{ semana.id }};
+        let valorPadrao = {{ valor_padrao }};
+        
+        // Funções de Filtro e Ordenação
+        function filtrarJogadores() {
+            const filtroStatus = document.getElementById('filtroStatus').value;
+            
+            document.querySelectorAll('.jogador-item').forEach(item => {
+                const status = item.getAttribute('data-status');
+                
+                if (filtroStatus === 'todos' || status === filtroStatus) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        function ordenarJogadores() {
+            const ordenarPor = document.getElementById('ordenarPor').value;
+            const container = document.getElementById('listaJogadores');
+            const items = Array.from(document.querySelectorAll('.jogador-item'));
+            
+            items.sort((a, b) => {
+                switch(ordenarPor) {
+                    case 'nome':
+                        const nomeA = a.querySelector('h6').textContent.toLowerCase();
+                        const nomeB = b.querySelector('h6').textContent.toLowerCase();
+                        return nomeA.localeCompare(nomeB);
+                        
+                    case 'status':
+                        const statusA = a.getAttribute('data-status');
+                        const statusB = b.getAttribute('data-status');
+                        return statusA.localeCompare(statusB);
+                        
+                    case 'valor':
+                        const valorA = parseFloat(a.querySelector('.valor-jogador').value);
+                        const valorB = parseFloat(b.querySelector('.valor-jogador').value);
+                        return valorB - valorA;
+                }
+            });
+            
+            // Reorganiza os itens no container
+            items.forEach(item => container.appendChild(item));
+        }
+        
+        // Funções de Pagamento
+        function selecionarMetodo(element) {
+            const jogadorId = element.getAttribute('data-jogador-id');
+            const metodo = element.getAttribute('data-metodo');
+            
+            // Atualizar visual dos botões
+            element.parentElement.querySelectorAll('.metodo-btn').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            element.classList.remove('btn-outline-primary');
+            element.classList.add('btn-primary');
+            
+            // Armazenar método selecionado em data attribute
+            const card = element.closest('.jogador-card');
+            card.setAttribute('data-metodo', metodo);
+        }
+        
+        function marcarComoPago(jogadorId) {
+            const card = document.querySelector(`.valor-jogador[data-jogador-id="${jogadorId}"]`).closest('.jogador-card');
+            const valorInput = card.querySelector('.valor-jogador');
+            const metodo = card.getAttribute('data-metodo') || 'dinheiro';
+            
+            const valor = valorInput.value;
+            
+            fetch('/api/cofre/pagar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jogador_id: jogadorId,
+                    semana_id: semanaId,
+                    valor: valor,
+                    metodo_pagamento: metodo
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao processar pagamento');
+            });
+        }
+        
+        function desmarcarPagamento(jogadorId) {
+            if (!confirm('Deseja realmente desmarcar este pagamento?')) return;
+            
+            fetch('/api/cofre/desmarcar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jogador_id: jogadorId,
+                    semana_id: semanaId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+        
+        function marcarTodosComoPagos() {
+            if (!confirm('Deseja marcar TODOS os jogadores como pagos?')) return;
+            
+            fetch('/api/cofre/pagar_todos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    semana_id: semanaId,
+                    valor_padrao: valorPadrao
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+        
+        function atualizarValorPadrao() {
+            const novoValor = document.getElementById('valorPadrao').value;
+            valorPadrao = parseFloat(novoValor);
+            
+            // Atualiza todos os campos de valor
+            document.querySelectorAll('.valor-jogador').forEach(input => {
+                input.value = novoValor;
+            });
+        }
+        
+        // Funções de Movimentação
+        function abrirModalDeposito() {
+            const modal = new bootstrap.Modal(document.getElementById('modalDeposito'));
+            modal.show();
+        }
+        
+        function abrirModalSaque() {
+            const modal = new bootstrap.Modal(document.getElementById('modalSaque'));
+            modal.show();
+        }
+        
+        function abrirModalValor() {
+            const modal = new bootstrap.Modal(document.getElementById('modalValor'));
+            modal.show();
+        }
+        
+        function abrirObservacao(jogadorId, observacaoAtual) {
+            document.getElementById('observacaoJogadorId').value = jogadorId;
+            document.getElementById('observacaoTexto').value = observacaoAtual || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalObservacao'));
+            modal.show();
+        }
+        
+        function salvarObservacao() {
+            const jogadorId = document.getElementById('observacaoJogadorId').value;
+            const observacao = document.getElementById('observacaoTexto').value;
+            
+            fetch('/api/cofre/salvar_observacao', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jogador_id: jogadorId,
+                    semana_id: semanaId,
+                    observacao: observacao
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalObservacao')).hide();
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+        
+        // Relatórios e Exportação
+        function gerarRelatorioSemanal() {
+            exportarRelatorioSemanal();
+        }
+        
+        function exportarRelatorioSemanal() {
+            window.open(`/admin/cofre/relatorio/semana/${semanaId}/exportar`, '_blank');
+        }
+        
+        function exportarRelatorioMensal() {
+            const hoje = new Date();
+            const mes = hoje.getMonth() + 1;
+            const ano = hoje.getFullYear();
+            window.open(`/admin/cofre/relatorio/mes/${ano}/${mes}/exportar`, '_blank');
+        }
+        
+        // Modal Functions
+        function realizarDeposito() {
+            const form = document.getElementById('formDeposito');
+            const valor = form.valor.value;
+            const descricao = form.descricao.value;
+            const observacao = form.observacao.value;
+            const adicionarMeta = form.adicionar_meta.checked;
+            
+            if (!valor || valor <= 0) {
+                alert('Informe um valor válido!');
+                return;
+            }
+            
+            fetch('/api/cofre/deposito', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    valor: parseFloat(valor),
+                    descricao: descricao,
+                    observacao: observacao,
+                    adicionar_meta: adicionarMeta
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('modalDeposito')).hide();
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao realizar depósito');
+            });
+        }
+        
+        function realizarSaque() {
+            const form = document.getElementById('formSaque');
+            const valor = form.valor.value;
+            const motivo = form.motivo.value;
+            const descricao = form.descricao.value;
+            const comprovante = form.comprovante.value;
+            
+            if (!valor || valor <= 0) {
+                alert('Informe um valor válido!');
+                return;
+            }
+            
+            if (!motivo) {
+                alert('Informe o motivo da retirada!');
+                return;
+            }
+            
+            if (!descricao) {
+                alert('Informe uma descrição detalhada!');
+                return;
+            }
+            
+            fetch('/api/cofre/saque', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    valor: parseFloat(valor),
+                    motivo: motivo,
+                    descricao: descricao,
+                    comprovante: comprovante
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('modalSaque')).hide();
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao realizar saque');
+            });
+        }
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            // Marcar método selecionado em cada card
+            document.querySelectorAll('.jogador-card').forEach(card => {
+                const metodo = card.querySelector('.metodo-btn.btn-primary');
+                if (metodo) {
+                    card.setAttribute('data-metodo', metodo.getAttribute('data-metodo'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
