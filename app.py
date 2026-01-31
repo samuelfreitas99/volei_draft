@@ -1,55 +1,92 @@
 import os
 import secrets
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, flash, session, jsonify
+)
+
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_login import (
+    LoginManager, UserMixin, login_user,
+    login_required, logout_user, current_user
+)
+
 from flask_socketio import SocketIO, emit, join_room, leave_room
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
-from datetime import timezone
 
 # ======================================================
 # CONFIGURAÇÃO
 # ======================================================
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
 
-# Configuração do banco de dados
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///volei_draft.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)  # Sessões duram 31 dias
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=31)  # Remember me dura 31 dias
-app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Renova sessão a cada request
+# SECRET KEY
+app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
 
-# Configurações de upload
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # 2MB
+# Ambiente
+FLASK_ENV = os.getenv("FLASK_ENV", "production")
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+# =========================
+# BANCO DE DADOS
+# =========================
+# Sempre SQLite por enquanto (DEV e PROD)
+# Seguro, simples e já em produção
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DB_PATH = os.path.join(BASE_DIR, "instance", "volei_draft.db")
+
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# =========================
+# SESSÃO E TEMPLATES
+# =========================
+app.config["TEMPLATES_AUTO_RELOAD"] = FLASK_ENV == "development"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=31)
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=31)
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+
+# =========================
+# UPLOADS
+# =========================
+UPLOAD_FOLDER = "static/uploads"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB
 
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Inicialização das extensões
+# =========================
+# EXTENSÕES
+# =========================
 db = SQLAlchemy(app)
-socketio = SocketIO(app, async_mode='threading', cors_allowed_origins='*')
 
-# Configuração do Flask-Login
+socketio = SocketIO(
+    app,
+    async_mode="gevent",
+    cors_allowed_origins="*"
+)
+
+# =========================
+# LOGIN
+# =========================
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = "login"
 
-# Constantes do sistema (serão configuráveis por semana)
+# =========================
+# CONSTANTES DO SISTEMA
+# =========================
 TEMPO_ESCOLHA = 30  # segundos
-VALOR_PADRAO_JOGO = 07.00
+VALOR_PADRAO_JOGO = 7.00
+
 
 # ======================================================
 # MODELOS (atualizados)
