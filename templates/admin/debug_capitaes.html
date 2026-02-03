@@ -1,0 +1,166 @@
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Debug - Capitães da Semana{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="fas fa-bug me-2"></i>
+                Debug: Capitães da Semana {{ format_date(semana.data) }}
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Esta página mostra o status das permissões dos capitães desta semana.
+            </div>
+            
+            {% if capitaes_info %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Capitão</th>
+                            <th>Tipo</th>
+                            <th>Usuário</th>
+                            <th>Role</th>
+                            <th>Meta</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in capitaes_info %}
+                        <tr class="{% if info.sincronizado %}table-success{% else %}table-warning{% endif %}">
+                            <td>{{ info.time }}</td>
+                            <td>
+                                <strong>{{ info.capitao_nome }}</strong><br>
+                                <small class="text-muted">ID: {{ info.capitao_id }}</small>
+                            </td>
+                            <td>
+                                {% if info.capitao_permanente %}
+                                <span class="badge bg-success">Permanente</span>
+                                {% else %}
+                                <span class="badge bg-info">Temporário</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if info.tem_usuario %}
+                                <span class="badge bg-success">Sim</span>
+                                {% else %}
+                                <span class="badge bg-danger">Não</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if info.user_role %}
+                                <span class="badge 
+                                    {% if info.user_role == 'capitao' %}bg-success
+                                    {% elif info.user_role == 'admin' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ info.user_role }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if info.meta_permissao %}
+                                <small>
+                                    Semana: {{ info.meta_permissao.semana_id }}<br>
+                                    Tipo: {{ info.meta_permissao.tipo }}
+                                </small>
+                                {% else %}
+                                <span class="badge bg-warning">Sem meta</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if info.sincronizado %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Sincronizado
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Problema
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="corrigirCapitao({{ info.capitao_id }})">
+                                    <i class="fas fa-wrench"></i> Corrigir
+                                </button>
+                            </td>
+                        </tr>
+                        {% if info.problemas %}
+                        <tr class="table-light">
+                            <td colspan="8">
+                                <strong>Problemas:</strong>
+                                <ul class="mb-0">
+                                    {% for problema in info.problemas %}
+                                    <li>{{ problema|safe }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-3">
+                <button class="btn btn-primary" onclick="sincronizarTodos()">
+                    <i class="fas fa-sync-alt me-2"></i>Sincronizar Todos
+                </button>
+                <a href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}" 
+                   class="btn btn-secondary ms-2">
+                    <i class="fas fa-arrow-left me-2"></i>Voltar ao Sorteio
+                </a>
+            </div>
+            
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-users-slash fa-3x text-muted mb-3"></i>
+                <h5>Nenhum time definido para esta semana</h5>
+                <p class="text-muted">Realize o sorteio de capitães primeiro.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function corrigirCapitao(capitaoId) {
+    fetch(`/admin/corrigir_capitao/${capitaoId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erro: ' + error.message);
+        });
+}
+
+function sincronizarTodos() {
+    if (confirm('Deseja sincronizar TODOS os capitães desta semana?')) {
+        fetch(`/admin/capitaes/sincronizar/{{ semana.id }}`)
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                }
+            })
+            .catch(error => {
+                alert('Erro: ' + error.message);
+            });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+<div class="modal fade" id="escolhaManualModal" tabindex="-1" aria-labelledby="escolhaManualModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="escolhaManualModalLabel">
+                    <i class="fas fa-hand-point-up me-2"></i>
+                    Escolher Capitães Manualmente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle fa-2x me-3"></i>
+                        <div>
+                            <strong>Instruções:</strong> Selecione {{ quantidade_capitaes }} jogadores para serem capitães.
+                            <br>Jogadores em <span class="badge bg-warning">cool-down</span> foram capitães recentemente.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge bg-primary p-2">
+                            <i class="fas fa-users me-1"></i>
+                            <span id="contadorSelecao">0/{{ quantidade_capitaes }}</span>
+                        </span>
+                    </div>
+                    <div class="small text-muted">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        Ordene por: 
+                        <select id="ordenarPor" class="form-select form-select-sm d-inline-block w-auto" onchange="ordenarJogadores(this.value)">
+                            <option value="pontuacao">Pontuação</option>
+                            <option value="nome">Nome</option>
+                            <option value="nivel">Nível</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="jogadoresSelecao">
+                    <!-- Jogadores serão carregados aqui -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Carregando jogadores...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="confirmarEscolhaManual" disabled>
+                    <i class="fas fa-check me-1"></i>Confirmar Escolha
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

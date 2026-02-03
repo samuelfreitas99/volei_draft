@@ -7,6 +7,44 @@
 
 <!-- CSS de correções específicas -->
 <style>
+
+    /* Estilos para seção de formação de times */
+    .capitao-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.05);
+    }
+
+    .capitaes-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .capitao-item {
+        padding: 8px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        transition: background 0.2s;
+    }
+
+    .capitao-item:hover {
+        background: #e9ecef;
+    }
+
+    /* Progress bar personalizada */
+    .progress {
+        background-color: #e9ecef;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        transition: width 0.5s ease;
+    }
         /* Menu Mobile Estilizado */
     .mobile-nav-menu {
         display: flex;
@@ -284,6 +322,10 @@
                         <li><a class="dropdown-item" href="{{ url_for('admin_todas_semanas') }}">Todas as Semanas</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('admin_semanas') }}?filtro_status=abertas">Abertas</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('admin_semanas') }}?filtro_status=draft_andamento">Draft em Andamento</a></li>
+                        <!-- ADICIONE ESTA LINHA: -->
+                        <li><a class="dropdown-item" href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}">
+                            <i class="fas fa-crown me-2 text-warning"></i>Sorteio de Capitães
+                        </a></li>
                     </ul>
                 </div>
                 
@@ -337,6 +379,9 @@
                                     </a>
                                     <a href="{{ url_for('admin_jogadores') }}" class="mobile-nav-item">
                                         <i class="fas fa-users me-2"></i>Jogadores
+                                    </a>
+                                    <a href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}" class="mobile-nav-item">
+                                        <i class="fas fa-crown me-2"></i>Sorteio de Capitães
                                     </a>
                                     <a href="{{ url_for('admin_mensalidades') }}" class="mobile-nav-item">
                                         <i class="fas fa-calendar-check me-2"></i>Mensalidades
@@ -544,6 +589,101 @@
                 <div class="card-header">
                     <i class="fas fa-bolt me-2"></i>Ações Rápidas da Semana
                 </div>
+
+            <!-- Seção de Formação de Times -->
+            <div class="content-card mb-4">
+                <div class="card-header bg-gradient-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-crown me-2"></i>Formação de Times
+                            <small class="opacity-75 ms-2">Pré-Draft</small>
+                        </div>
+                        {% if semana.draft_em_andamento or semana.draft_finalizado %}
+                        <span class="badge bg-success">Draft em andamento</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                        <div>
+                            <h6 class="mb-2">Configuração dos Times</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-primary">{{ semana.max_times }} times</span>
+                                <span class="badge bg-info">{{ semana.max_jogadores_por_time }} jogadores/time</span>
+                                <span class="badge bg-secondary">{{ confirmados }} confirmados</span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if semana.lista_aberta %}
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Feche a lista primeiro para formar times
+                            </div>
+                            {% elif semana.draft_em_andamento or semana.draft_finalizado %}
+                            <div class="alert alert-success mb-0">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Draft {{ 'em andamento' if semana.draft_em_andamento else 'finalizado' }}
+                            </div>
+                            {% else %}
+                            <!-- Verifica se pode iniciar sorteio -->
+                            {% set times_formados = Time.query.filter_by(semana_id=semana.id).count() %}
+                            {% if times_formados == 0 %}
+                            <a href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}" 
+                            class="btn btn-warning">
+                                <i class="fas fa-random me-2"></i>Formar Capitães
+                            </a>
+                            {% else %}
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}" 
+                                class="btn btn-outline-warning">
+                                    <i class="fas fa-edit me-2"></i>Editar Capitães
+                                </a>
+                                {% if times_formados >= 2 %}
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#configDraftModal">
+                                    <i class="fas fa-play me-2"></i>Iniciar Draft
+                                </button>
+                                {% else %}
+                                <div class="alert alert-danger mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Necessário {{ semana.max_times }} capitães
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Status dos Times -->
+                    {% if not semana.lista_aberta and not semana.draft_em_andamento and not semana.draft_finalizado %}
+                    <div class="mt-3">
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-warning" role="progressbar" 
+                                style="width: {{ (Time.query.filter_by(semana_id=semana.id).count() / semana.max_times * 100)|round }}%">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <small class="text-muted">
+                                Times formados: {{ Time.query.filter_by(semana_id=semana.id).count() }}/{{ semana.max_times }}
+                            </small>
+                            <small class="text-muted">
+                                {% set capitaes_formados = Time.query.filter_by(semana_id=semana.id).count() %}
+                                {% if capitaes_formados == 0 %}
+                                <i class="fas fa-clock text-warning me-1"></i>Aguardando formação
+                                {% elif capitaes_formados < semana.max_times %}
+                                <i class="fas fa-exclamation-triangle text-warning me-1"></i>Incompleto
+                                {% else %}
+                                <i class="fas fa-check-circle text-success me-1"></i>Completo
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
                 <div class="card-body">
                     <div class="acoes-grid">
                         {% if semana.lista_aberta %}
@@ -558,6 +698,14 @@
                             <i class="fas fa-lock-open me-2"></i>Abrir Lista
                         </a>
                         {% endif %}
+
+                        {% if not semana.draft_em_andamento and not semana.draft_finalizado and not semana.lista_aberta %}
+                            <!-- Botão para Sorteio de Capitães -->
+                            <a href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}" 
+                            class="btn btn-warning">
+                                <i class="fas fa-crown me-2"></i>Sorteio de Capitães
+                            </a>
+                        {% endif %}                        
 
                         {% if not semana.draft_em_andamento and not semana.draft_finalizado and not semana.lista_aberta %}
                             {% if confirmados >= total_vagas %}
@@ -688,6 +836,54 @@
 
         <!-- Sidebar Direita -->
         <div class="sidebar-column">
+
+        {% set capitaes_formados = Time.query.filter_by(semana_id=semana.id).count() %}
+        {% if capitaes_formados > 0 and not semana.draft_em_andamento and not semana.draft_finalizado %}
+        <div class="content-card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-crown me-2"></i>Capitães Formados
+                        <span class="badge bg-light text-dark ms-2">{{ capitaes_formados }}/{{ semana.max_times }}</span>
+                    </div>
+                    <a href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}" 
+                    class="btn btn-sm btn-light">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="capitaes-list">
+                    {% for time in Time.query.filter_by(semana_id=semana.id).order_by(Time.ordem_escolha).all() %}
+                    <div class="capitao-item d-flex align-items-center mb-2">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="capitao-icon" style="color: {{ time.cor }};">
+                                <i class="fas fa-crown fa-lg"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ time.nome }}</div>
+                            <div class="small text-muted">{{ time.capitao.nome if time.capitao else 'Sem capitão' }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if capitaes_formados >= 2 %}
+                <div class="alert alert-success mt-3 mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Times prontos para iniciar draft!
+                </div>
+                {% else %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Necessário {{ semana.max_times }} capitães para iniciar
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+            
             <!-- Times (se existirem) -->
             {% if times %}
             <div class="content-card mb-4">

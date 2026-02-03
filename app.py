@@ -19,6 +19,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
+from threading import Lock
 
 # ======================================================
 # CONFIGURAÇÃO
@@ -69,6 +70,9 @@ app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+background_task = None
+background_task_lock = Lock()
+
 # =========================
 # EXTENSÕES
 # =========================
@@ -77,7 +81,12 @@ db = SQLAlchemy(app)
 socketio = SocketIO(
     app,
     async_mode="gevent",
-    cors_allowed_origins="*"
+    cors_allowed_origins="*",
+    logger=True,  # Ativa logs do SocketIO
+    engineio_logger=True,  # Ativa logs do EngineIO
+    ping_timeout=60,
+    ping_interval=25,
+    always_connect=True
 )
 
 # =========================
@@ -258,7 +267,7 @@ class Time(db.Model):
     
     # Relacionamentos
     capitao = db.relationship('Jogador', backref='times_como_capitao')
-    escolhas = db.relationship('EscolhaDraft', backref='time', lazy='dynamic')
+    escolhas = db.relationship('EscolhaDraft', back_populates='time', lazy='dynamic')
     
     def __repr__(self):
         return f'<Time {self.nome}>'
@@ -267,13 +276,14 @@ class EscolhaDraft(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     semana_id = db.Column(db.Integer, db.ForeignKey('semana.id'), nullable=False)
     jogador_id = db.Column(db.Integer, db.ForeignKey('jogador.id'), nullable=False)
-    time_id = db.Column(db.Integer, db.ForeignKey('time.id'), nullable=False)
+    time_id = db.Column(db.Integer, db.ForeignKey('time.id'), nullable=False)  # <-- DEVE ter nullable=False
     ordem_escolha = db.Column(db.Integer)
     round_num = db.Column(db.Integer, default=1)
     escolhido_em = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relacionamentos
     jogador = db.relationship('Jogador', backref='escolhas_draft')
+    time = db.relationship('Time', back_populates='escolhas')
     
     def __repr__(self):
         return f'<EscolhaDraft {self.jogador_id} -> Time {self.time_id}>'
@@ -399,6 +409,13 @@ class MetaCofre(db.Model):
 # ======================================================
 # FUNÇÕES AUXILIARES
 # ======================================================
+
+def get_dia_semana_curto(numero_dia):
+    """Retorna o nome curto do dia da semana"""
+    dias_curto = [
+        'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'
+    ]
+    return dias_curto[numero_dia] if 0 <= numero_dia < len(dias_curto) else '??'
 
 def verificar_dependencias_jogador(jogador_id):
     """Verifica se há dependências que impedem a exclusão do jogador"""
@@ -890,94 +907,171 @@ def verificar_mensalidades_vencidas():
                 print(f"⚠️ Jogador {jogador.nome} removido de mensalista - mensalidade vencida")
 
 def inicializar_draft(semana, tempo_por_escolha=None, modo_draft=None, max_times=None, max_jogadores_por_time=None):
-    """Inicializa o draft com os times e status - SEM TIMER"""
-    # Remove dados anteriores do draft
-    Time.query.filter_by(semana_id=semana.id).delete()
-    EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
-    DraftStatus.query.filter_by(semana_id=semana.id).delete()
-    HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
+    """Inicializa o draft com os times e status - ATUALIZADA PARA SINCRONIZAR CAPITÃES"""
+    # Verificar se já existem times (vindo do sorteio)
+    times_existentes = Time.query.filter_by(semana_id=semana.id).all()
     
-    # Usa configurações da semana ou os parâmetros fornecidos
-    if max_times:
-        semana.max_times = max_times
-    if max_jogadores_por_time:
-        semana.max_jogadores_por_time = max_jogadores_por_time
-    # SEMPRE define tempo como 0 (sem tempo)
-    semana.tempo_escolha = 0
-    if modo_draft:
-        semana.modo_draft = modo_draft
-    
-    # Busca capitães confirmados
-    confirmacoes_capitaes = db.session.query(Confirmacao).join(Jogador).filter(
-        Confirmacao.semana_id == semana.id,
-        Confirmacao.confirmado == True,
-        Jogador.capitao == True
-    ).order_by(Jogador.ordem_capitao).all()
-    
-    capitaes = [c.jogador for c in confirmacoes_capitaes[:semana.max_times]]
-    
-    if len(capitaes) < 2:
-        raise ValueError(f'É necessário pelo menos 2 capitães confirmados (encontrados: {len(capitaes)})')
-    
-    # Verifica número total de jogadores necessários
-    total_jogadores_necessarios = semana.max_times * semana.max_jogadores_por_time
-    total_confirmados = Confirmacao.query.filter_by(
-        semana_id=semana.id,
-        confirmado=True
-    ).count()
-    
-    if total_confirmados < total_jogadores_necessarios:
-        raise ValueError(f'É necessário pelo menos {total_jogadores_necessarios} jogadores confirmados! Confirmados: {total_confirmados}')
-    
-    # Cria times
-    cores = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
-    times = []
-    
-    for i, capitao in enumerate(capitaes):
-        time = Time(
-            semana_id=semana.id,
-            nome=f'Time {i+1}',
-            capitao_id=capitao.id,
-            ordem_escolha=i+1,
-            cor=cores[i % len(cores)]
-        )
-        db.session.add(time)
-        times.append(time)
-    
-    db.session.commit()
-    
-    # Adiciona capitães automaticamente aos times
-    for i, time in enumerate(times):
-        capitao = Jogador.query.get(time.capitao_id)
+    if times_existentes and len(times_existentes) >= 2:
+        # Usar times existentes em vez de criar novos
+        times = times_existentes
+        capitaes = [Jogador.query.get(time.capitao_id) for time in times]
         
-        # Adiciona o capitão ao time como primeira escolha
-        escolha_capitao = EscolhaDraft(
-            semana_id=semana.id,
-            jogador_id=capitao.id,
-            time_id=time.id,
-            ordem_escolha=i + 1,
-            round_num=0,
-            escolhido_em=datetime.utcnow()
-        )
-        db.session.add(escolha_capitao)
+        # IMPORTANTE: ANTES de iniciar o draft, desmarcar TODOS os jogadores como capitões no sistema
+        # (os capitães serão definidos apenas pelos times deste draft)
+        Jogador.query.filter_by(capitao=True).update({'capitao': False})
         
-        # Registra no histórico
-        historico = HistoricoDraft(
+        # Marcar APENAS os capitães atuais deste draft como capitões
+        for capitao in capitaes:
+            if capitao:
+                capitao.capitao = True
+                # Sincronizar permissões do usuário
+                if capitao.user:
+                    capitao.user.role = 'capitao'
+        
+        # Garantir que todos os capitães estão confirmados
+        for capitao in capitaes:
+            confirmacao = Confirmacao.query.filter_by(
+                semana_id=semana.id,
+                jogador_id=capitao.id,
+                confirmado=True
+            ).first()
+            if not confirmacao:
+                raise ValueError(f'Capitão {capitao.nome} não está confirmado!')
+        
+        # NÃO REMOVER ESCOLHAS EXISTENTES (os capitães já estão nas escolhas)
+        # Apenas remove DraftStatus e HistoricoDraft antigos se existirem
+        DraftStatus.query.filter_by(semana_id=semana.id).delete()
+        HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
+        
+        # Verificar se os capitães já estão nas escolhas
+        for time in times:
+            escolha_existente = EscolhaDraft.query.filter_by(
+                semana_id=semana.id,
+                jogador_id=time.capitao_id,
+                time_id=time.id
+            ).first()
+            
+            if not escolha_existente:
+                # Adiciona o capitão como escolha se não existir
+                escolha_capitao = EscolhaDraft(
+                    semana_id=semana.id,
+                    jogador_id=time.capitao_id,
+                    time_id=time.id,
+                    ordem_escolha=time.ordem_escolha,
+                    round_num=0,
+                    escolhido_em=datetime.utcnow()
+                )
+                db.session.add(escolha_capitao)
+                
+                historico = HistoricoDraft(
+                    semana_id=semana.id,
+                    jogador_id=time.capitao_id,
+                    time_id=time.id,
+                    acao='capitao_inicial',
+                    detalhes=f'Capitão adicionado ao iniciar draft'
+                )
+                db.session.add(historico)
+    else:
+        # CÓDIGO ORIGINAL PARA QUANDO NÃO HÁ TIMES (cria do zero)
+        # Remove dados anteriores do draft
+        Time.query.filter_by(semana_id=semana.id).delete()
+        EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
+        DraftStatus.query.filter_by(semana_id=semana.id).delete()
+        HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
+        
+        # Desmarcar todos os capitães existentes
+        Jogador.query.filter_by(capitao=True).update({'capitao': False})
+        
+        # Usa configurações da semana
+        if max_times:
+            semana.max_times = max_times
+        if max_jogadores_por_time:
+            semana.max_jogadores_por_time = max_jogadores_por_time
+        if tempo_por_escolha is not None:
+            semana.tempo_escolha = tempo_por_escolha
+        if modo_draft:
+            semana.modo_draft = modo_draft
+        
+        # Busca capitães confirmados
+        confirmacoes_capitaes = db.session.query(Confirmacao).join(Jogador).filter(
+            Confirmacao.semana_id == semana.id,
+            Confirmacao.confirmado == True,
+            Jogador.capitao == True
+        ).order_by(Jogador.ordem_capitao).all()
+        
+        capitaes = [c.jogador for c in confirmacoes_capitaes[:semana.max_times]]
+        
+        if len(capitaes) < 2:
+            raise ValueError(f'É necessário pelo menos 2 capitães confirmados (encontrados: {len(capitaes)})')
+        
+        # Marcar estes jogadores como capitães
+        for capitao in capitaes:
+            capitao.capitao = True
+            # Sincronizar permissões do usuário
+            if capitao.user:
+                capitao.user.role = 'capitao'
+        
+        # Verifica número total de jogadores necessários
+        total_jogadores_necessarios = semana.max_times * semana.max_jogadores_por_time
+        total_confirmados = Confirmacao.query.filter_by(
             semana_id=semana.id,
-            jogador_id=capitao.id,
-            time_id=time.id,
-            acao='capitao_auto',
-            detalhes=f'Capitão adicionado automaticamente ao time'
-        )
-        db.session.add(historico)
+            confirmado=True
+        ).count()
+        
+        if total_confirmados < total_jogadores_necessarios:
+            raise ValueError(f'É necessário pelo menos {total_jogadores_necessarios} jogadores confirmados! Confirmados: {total_confirmados}')
+        
+        # Cria times
+        cores = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+        times = []
+        
+        for i, capitao in enumerate(capitaes):
+            time = Time(
+                semana_id=semana.id,
+                nome=f'Time {i+1}',
+                capitao_id=capitao.id,
+                ordem_escolha=i+1,
+                cor=cores[i % len(cores)]
+            )
+            db.session.add(time)
+            times.append(time)
+        
+        db.session.commit()
+        
+        # Adiciona capitães automaticamente aos times
+        for i, time in enumerate(times):
+            capitao = Jogador.query.get(time.capitao_id)
+            
+            escolha_capitao = EscolhaDraft(
+                semana_id=semana.id,
+                jogador_id=capitao.id,
+                time_id=time.id,
+                ordem_escolha=i + 1,
+                round_num=0,
+                escolhido_em=datetime.utcnow()
+            )
+            db.session.add(escolha_capitao)
+            
+            historico = HistoricoDraft(
+                semana_id=semana.id,
+                jogador_id=capitao.id,
+                time_id=time.id,
+                acao='capitao_auto',
+                detalhes=f'Capitão adicionado automaticamente ao time'
+            )
+            db.session.add(historico)
     
-    # Inicializa status do draft - SEM TEMPO
+    # Inicializa status do draft
+    tempo_inicial = None if (tempo_por_escolha == 0 or semana.tempo_escolha == 0) else (tempo_por_escolha or semana.tempo_escolha)
+    
+    capitao_inicial = times[0].capitao_id
+    
     draft_status = DraftStatus(
         semana_id=semana.id,
-        vez_capitao_id=capitaes[0].id,
+        vez_capitao_id=capitao_inicial,
         rodada_atual=1,
-        escolha_atual=len(times) + 1,
-        tempo_restante=None,  # Sem tempo
+        escolha_atual=len(times) + 1,  # Já contando com os capitães
+        tempo_restante=tempo_inicial,
         finalizado=False,
         modo_snake=(semana.modo_draft == 'snake')
     )
@@ -993,7 +1087,131 @@ def inicializar_draft(semana, tempo_por_escolha=None, modo_draft=None, max_times
     # Emite atualização inicial
     emitir_status_draft_atualizado(semana.id)
     
+    print(f"✅ Draft iniciado para semana {semana.id}")
+    print(f"📊 Capitães ativos: {', '.join([Jogador.query.get(t.capitao_id).nome for t in times if t.capitao_id])}")
+    
     return times, draft_status
+
+@app.route('/admin/sorteio_capitaes')
+@admin_required
+def admin_sorteio_capitaes():
+    """Página de sorteio/formação de capitães - SEMPRE ACESSÍVEL"""
+    semana_id = request.args.get('semana_id', type=int)
+    
+    if semana_id:
+        semana = Semana.query.get(semana_id)
+    else:
+        semana = get_semana_atual()
+    
+    if not semana:
+        flash('Semana não encontrada!', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    
+    # SEMPRE permite acesso, mesmo com draft em andamento
+    # (apenas mostra mensagem informativa se draft já começou)
+    
+    # Buscar jogadores confirmados com informações para sorteio
+    confirmacoes = Confirmacao.query.filter_by(
+        semana_id=semana.id,
+        confirmado=True
+    ).order_by(Confirmacao.prioridade.desc()).all()
+    
+    # Processar jogadores para o sorteio
+    jogadores_sorteio = []
+    for conf in confirmacoes:
+        jogador = conf.jogador
+        
+        # Verificar elegibilidade (cool-down de 2 semanas)
+        elegivel = True
+        ultima_vez_capitao = "Nunca"
+        
+        # Buscar se foi capitão nas últimas 2 semanas
+        duas_semanas_atras = date.today() - timedelta(weeks=2)
+        ultimas_semanas = Semana.query.filter(
+            Semana.data >= duas_semanas_atras,
+            Semana.draft_finalizado == True
+        ).order_by(Semana.data.desc()).all()
+        
+        # Buscar se foi capitão nessas semanas
+        foi_capitao_recente = False
+        for s in ultimas_semanas:
+            time = Time.query.filter_by(
+                semana_id=s.id,
+                capitao_id=jogador.id
+            ).first()
+            if time:
+                foi_capitao_recente = True
+                ultima_vez_capitao = format_date_func(s.data)
+                break
+        
+        # Se foi capitão nas últimas 2 semanas, não é elegível
+        if foi_capitao_recente:
+            elegivel = False
+        
+        # Calcular pontuação base
+        pontuacao = 0
+        if jogador.mensalista:
+            pontuacao += 100
+        if jogador.capitao:  # Capitão fixo no sistema
+            pontuacao += 50
+        
+        # Contar vezes que já foi capitão (histórico)
+        vezes_capitao = Time.query.filter_by(capitao_id=jogador.id).count()
+        pontuacao -= vezes_capitao * 10  # Diminui pontuação de quem já foi muito
+        
+        # Adicionar pontuação baseada na frequência de confirmações
+        total_confirmacoes = Confirmacao.query.filter_by(
+            jogador_id=jogador.id,
+            confirmado=True
+        ).count()
+        pontuacao += total_confirmacoes * 5
+        
+        jogadores_sorteio.append({
+            'id': jogador.id,
+            'nome': jogador.nome,
+            'apelido': jogador.apelido,
+            'posicao': jogador.posicao,
+            'nivel': jogador.nivel,
+            'foto_perfil': jogador.foto_perfil,
+            'mensalista': jogador.mensalista,
+            'capitao': jogador.capitao,  # Capitão fixo
+            'elegivel': elegivel,
+            'pontuacao': pontuacao,
+            'vezes_capitao': vezes_capitao,
+            'ultima_vez_capitao': ultima_vez_capitao,
+            'confirmacao': conf
+        })
+    
+    # Ordenar por pontuação (maior primeiro)
+    jogadores_sorteio.sort(key=lambda x: x['pontuacao'], reverse=True)
+    
+    # Buscar times já existentes (se já foram formados)
+    times_existentes = Time.query.filter_by(semana_id=semana.id).all()
+    
+    # Para cada time, buscar escolhas e capitão
+    for time in times_existentes:
+        time.escolhas = EscolhaDraft.query.filter_by(
+            semana_id=semana.id,
+            time_id=time.id
+        ).order_by(EscolhaDraft.ordem_escolha).all()
+        time.capitao = Jogador.query.get(time.capitao_id)
+    
+    # Quantidade de capitães necessários baseado na configuração
+    quantidade_capitaes = semana.max_times
+    
+    # Mensagem informativa se draft já está em andamento
+    mensagem_draft = None
+    if semana.draft_em_andamento:
+        mensagem_draft = "⚠️ Draft em andamento! Você ainda pode trocar capitões, mas as mudanças podem afetar o draft atual."
+    elif semana.draft_finalizado:
+        mensagem_draft = "✅ Draft finalizado! Apenas visualização."
+    
+    return render_template('admin/sorteio_capitaes.html',
+                         semana=semana,
+                         jogadores_sorteio=jogadores_sorteio,
+                         times_existentes=times_existentes,
+                         quantidade_capitaes=quantidade_capitaes,
+                         mensagem_draft=mensagem_draft)
 
 def get_jogadores_disponiveis_draft(semana):
     """Retorna jogadores disponíveis para draft (excluindo capitães já em times)"""
@@ -1145,114 +1363,6 @@ def emitir_status_draft_atualizado(semana_id):
         'times': times_info
     }, room=f'draft_{semana.id}')
 
-def inicializar_draft(semana, tempo_por_escolha=None, modo_draft=None, max_times=None, max_jogadores_por_time=None):
-    """Inicializa o draft com os times e status - CORRIGIDA"""
-    # Remove dados anteriores do draft
-    Time.query.filter_by(semana_id=semana.id).delete()
-    EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
-    DraftStatus.query.filter_by(semana_id=semana.id).delete()
-    HistoricoDraft.query.filter_by(semana_id=semana.id).delete()  # Limpa histórico também
-    
-    # Usa configurações da semana ou os parâmetros fornecidos
-    if max_times:
-        semana.max_times = max_times
-    if max_jogadores_por_time:
-        semana.max_jogadores_por_time = max_jogadores_por_time
-    if tempo_por_escolha is not None:  # Aceita 0 (sem timer)
-        semana.tempo_escolha = tempo_por_escolha
-    if modo_draft:
-        semana.modo_draft = modo_draft
-    
-    # Busca capitães confirmados
-    confirmacoes_capitaes = db.session.query(Confirmacao).join(Jogador).filter(
-        Confirmacao.semana_id == semana.id,
-        Confirmacao.confirmado == True,
-        Jogador.capitao == True
-    ).order_by(Jogador.ordem_capitao).all()
-    
-    capitaes = [c.jogador for c in confirmacoes_capitaes[:semana.max_times]]
-    
-    if len(capitaes) < 2:
-        raise ValueError(f'É necessário pelo menos 2 capitães confirmados (encontrados: {len(capitaes)})')
-    
-    # Verifica número total de jogadores necessários
-    total_jogadores_necessarios = semana.max_times * semana.max_jogadores_por_time
-    total_confirmados = Confirmacao.query.filter_by(
-        semana_id=semana.id,
-        confirmado=True
-    ).count()
-    
-    if total_confirmados < total_jogadores_necessarios:
-        raise ValueError(f'É necessário pelo menos {total_jogadores_necessarios} jogadores confirmados! Confirmados: {total_confirmados}')
-    
-    # Cria times
-    cores = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
-    times = []
-    
-    for i, capitao in enumerate(capitaes):
-        time = Time(
-            semana_id=semana.id,
-            nome=f'Time {i+1}',
-            capitao_id=capitao.id,
-            ordem_escolha=i+1,
-            cor=cores[i % len(cores)]
-        )
-        db.session.add(time)
-        times.append(time)
-    
-    db.session.commit()
-    
-    # Adiciona capitães automaticamente aos times
-    for i, time in enumerate(times):
-        capitao = Jogador.query.get(time.capitao_id)
-        
-        # Adiciona o capitão ao time como primeira escolha
-        escolha_capitao = EscolhaDraft(
-            semana_id=semana.id,
-            jogador_id=capitao.id,
-            time_id=time.id,
-            ordem_escolha=i + 1,
-            round_num=0,
-            escolhido_em=datetime.utcnow()
-        )
-        db.session.add(escolha_capitao)
-        
-        # Registra no histórico
-        historico = HistoricoDraft(
-            semana_id=semana.id,
-            jogador_id=capitao.id,
-            time_id=time.id,
-            acao='capitao_auto',
-            detalhes=f'Capitão adicionado automaticamente ao time'
-        )
-        db.session.add(historico)
-    
-    # Inicializa status do draft
-    # Se tempo_por_escolha for 0, define tempo_restante como None (sem timer)
-    tempo_inicial = None if tempo_por_escolha == 0 else semana.tempo_escolha
-    
-    draft_status = DraftStatus(
-        semana_id=semana.id,
-        vez_capitao_id=capitaes[0].id,
-        rodada_atual=1,
-        escolha_atual=len(times) + 1,  # Já contando com os capitães
-        tempo_restante=tempo_inicial,
-        finalizado=False,
-        modo_snake=(semana.modo_draft == 'snake')
-    )
-    db.session.add(draft_status)
-    
-    # Atualiza status da semana
-    semana.draft_em_andamento = True
-    semana.lista_aberta = False
-    semana.lista_encerrada = True
-    
-    db.session.commit()
-    
-    # Emite atualização inicial
-    emitir_status_draft_atualizado(semana.id)
-    
-    return times, draft_status
 
 @app.route('/admin/recriar_semanas_automaticas')
 @admin_required
@@ -2252,7 +2362,7 @@ def criar_semanas_automaticas():
 @app.route('/admin/iniciar_draft', methods=['POST'])
 @admin_required
 def iniciar_draft():
-    """Inicia o draft - MODIFICADA"""
+    """Inicia o draft - MODIFICADA PARA ACEITAR REDIRECIONAMENTO"""
     semana_id = request.form.get('semana_id', type=int)
     
     if semana_id:
@@ -2261,12 +2371,19 @@ def iniciar_draft():
         semana = get_semana_atual()
     
     if not semana:
-        flash('Semana não encontrada!', 'danger')
-        return redirect(url_for('admin_dashboard'))
+        return jsonify({'success': False, 'message': 'Semana não encontrada!'})
+    
+    # Verificar se já tem times formados
+    times_existentes = Time.query.filter_by(semana_id=semana.id).count()
+    if times_existentes < 2:
+        return jsonify({
+            'success': False, 
+            'message': f'É necessário pelo menos 2 times formados! Atual: {times_existentes}'
+        })
     
     # Obtém configurações do formulário
     modo_draft = request.form.get('modo_draft', 'snake')
-    max_times = request.form.get('max_times', type=int, default=2)
+    max_times = request.form.get('max_times', type=int, default=times_existentes)
     max_jogadores_por_time = request.form.get('max_jogadores_por_time', type=int, default=6)
     tempo_por_escolha = request.form.get('tempo_por_escolha', type=int, default=0)
     
@@ -2283,21 +2400,30 @@ def iniciar_draft():
     ).count()
     
     if capitaes_confirmados < max_times:
-        flash(f'É necessário pelo menos {max_times} capitães confirmados! Confirmados: {capitaes_confirmados}', 'danger')
-        return redirect(url_for('admin_dashboard'))
+        return jsonify({
+            'success': False, 
+            'message': f'É necessário pelo menos {max_times} capitães confirmados! Confirmados: {capitaes_confirmados}'
+        })
     
     total_vagas = max_times * max_jogadores_por_time
     if total_confirmados < total_vagas:
-        flash(f'É necessário pelo menos {total_vagas} jogadores confirmados! Confirmados: {total_confirmados}', 'danger')
-        return redirect(url_for('admin_dashboard'))
+        return jsonify({
+            'success': False, 
+            'message': f'É necessário pelo menos {total_vagas} jogadores confirmados! Confirmados: {total_confirmados}'
+        })
     
     try:
         inicializar_draft(semana, tempo_por_escolha, modo_draft, max_times, max_jogadores_por_time)
-        flash(f'Draft iniciado para {format_date_func(semana.data)}!', 'success')
+        
+        return jsonify({
+            'success': True,
+            'message': f'Draft iniciado para {format_date_func(semana.data)}!',
+            'redirect_url': url_for('admin_dashboard', semana_id=semana.id)
+        })
     except ValueError as e:
-        flash(str(e), 'danger')
-    
-    return redirect(url_for('admin_dashboard', semana_id=semana.id))
+        return jsonify({'success': False, 'message': str(e)})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
 
 @app.route('/admin/verificar_capitaes')
 @admin_required
@@ -2339,6 +2465,38 @@ def verificar_capitaes():
 # ======================================================
 # SOCKET.IO - ATUALIZAÇÕES (ADICIONAR)
 # ======================================================
+
+def background_thread():
+    """Thread em background para atualizar timer do draft"""
+    import time
+    while True:
+        try:
+            with app.app_context():
+                semanas_draft = Semana.query.filter_by(draft_em_andamento=True).all()
+
+                for semana in semanas_draft:
+                    draft_status = DraftStatus.query.filter_by(semana_id=semana.id).first()
+                    if draft_status and not draft_status.finalizado and semana.tempo_escolha > 0:
+                        if draft_status.tempo_restante and draft_status.tempo_restante > 0:
+                            draft_status.tempo_restante -= 1
+                            db.session.commit()
+
+                            socketio.emit('draft_timer_update', {
+                                'semana_id': semana.id,
+                                'tempo_restante': draft_status.tempo_restante
+                            }, room=f'draft_{semana.id}')
+
+                            if draft_status.tempo_restante == 0:
+                                print(f"⏰ Tempo esgotado para semana {semana.id}")
+
+                        elif draft_status.tempo_restante == 0:
+                            draft_status.tempo_restante = semana.tempo_escolha
+                            db.session.commit()
+
+            time.sleep(1)
+        except Exception as e:
+            print(f"Erro na thread de background: {e}")
+            time.sleep(5)
 
 @socketio.on('request_draft_status')
 def handle_request_draft_status(data):
@@ -2465,6 +2623,27 @@ def handle_player_selected(data):
     
     # Também emite status completo
     emitir_status_draft_atualizado(semana.id) 
+    
+@socketio.on('connect')
+def handle_connect():
+    global background_task
+    print(f"✅ Conexão SocketIO estabelecida: {request.sid}")
+
+    if current_user.is_authenticated:
+        join_room(f'user_{current_user.id}')
+
+    # Inicia background task apenas 1 vez (funciona com gunicorn)
+    if TEMPO_ESCOLHA > 0:
+        with background_task_lock:
+            if background_task is None:
+                background_task = socketio.start_background_task(background_thread)
+
+    emit('connection_established', {
+        'message': 'Conectado ao servidor SocketIO',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+    
+
 
 def criar_username_jogador(jogador):
     """Cria username único para jogador"""
@@ -2533,6 +2712,12 @@ def admin_dashboard():
             semana = get_semana_atual()
     else:
         semana = get_semana_atual()
+        
+    # BUSCA TIMES FORMADOS PARA ESTA SEMANA
+    times_formados = Time.query.filter_by(semana_id=semana.id).all()
+    
+    # Conta capitães formados
+    capitaes_formados = len(times_formados)    
     
     # Estatísticas
     total_jogadores = Jogador.query.filter_by(ativo=True).count()
@@ -2583,7 +2768,10 @@ def admin_dashboard():
                          mensalistas_nao_confirmados=mensalistas_nao_confirmados,
                          lista_espera=lista_espera,
                          times=times,
-                         outras_semanas=outras_semanas)  # Novo parâmetro
+                         outras_semanas=outras_semanas,  # Novo parâmetro
+                         times_formados=times_formados,  # ADICIONE ESTE
+                         capitaes_formados=capitaes_formados,  # ADICIONE ESTE
+                         Time=Time,)  # ADICIONE ESTE - passa a classe Time para o template
                          
 
 # ======================================================
@@ -4593,7 +4781,662 @@ def sincronizar_todos_capitaes():
         'message': f'{corrigidos} de {len(capitaes)} capitães sincronizados!'
     })
     
+# ======================================================
+# NOVAS ROTAS PARA SORTEIO DE CAPITÃES
+# ======================================================
 
+   
+    
+@app.route('/api/capitao/prioridade/<int:semana_id>')
+@admin_required
+def api_capitao_prioridade(semana_id):
+    """API para obter jogadores ordenados por prioridade"""
+    semana = Semana.query.get_or_404(semana_id)
+    
+    confirmacoes = Confirmacao.query.filter_by(
+        semana_id=semana.id,
+        confirmado=True
+    ).order_by(Confirmacao.prioridade.desc()).all()
+    
+    jogadores_info = []
+    for conf in confirmacoes:
+        jogador = conf.jogador
+        
+        # Verificar elegibilidade
+        elegivel = True
+        duas_semanas_atras = date.today() - timedelta(weeks=2)
+        ultimas_semanas = Semana.query.filter(
+            Semana.data >= duas_semanas_atras,
+            Semana.draft_finalizado == True
+        ).all()
+        
+        for s in ultimas_semanas:
+            if Time.query.filter_by(semana_id=s.id, capitao_id=jogador.id).first():
+                elegivel = False
+                break
+        
+        # Calcular pontuação
+        pontuacao = 0
+        if jogador.mensalista:
+            pontuacao += 100
+        if jogador.capitao:
+            pontuacao += 50
+        
+        vezes_capitao = Time.query.filter_by(capitao_id=jogador.id).count()
+        pontuacao -= vezes_capitao * 10
+        
+        jogadores_info.append({
+            'id': jogador.id,
+            'nome': jogador.nome,
+            'apelido': jogador.apelido,
+            'posicao': jogador.posicao,
+            'nivel': jogador.nivel,
+            'foto_perfil': jogador.foto_perfil,
+            'mensalista': jogador.mensalista,
+            'capitao': jogador.capitao,
+            'elegivel': elegivel,
+            'pontuacao': pontuacao,
+            'vezes_capitao': vezes_capitao,
+            'confirmacao': conf.confirmado
+        })
+    
+    jogadores_info.sort(key=lambda x: x['pontuacao'], reverse=True)
+    
+    return jsonify({
+        'success': True,
+        'jogadores': jogadores_info
+    })
+
+@app.route('/admin/sorteio_capitaes/realizar/<int:semana_id>', methods=['POST'])
+@admin_required
+def realizar_sorteio_capitaes(semana_id):
+    """Realiza sorteio automático de capitães"""
+    semana = Semana.query.get_or_404(semana_id)
+    
+    # Verificar se já há draft
+    if semana.draft_em_andamento or semana.draft_finalizado:
+        return jsonify({'success': False, 'message': 'Draft já está em andamento!'})
+    
+    try:
+        # Buscar jogadores confirmados elegíveis (não em cool-down)
+        confirmacoes = Confirmacao.query.filter_by(
+            semana_id=semana.id,
+            confirmado=True
+        ).all()
+        
+        jogadores_elegiveis = []
+        for conf in confirmacoes:
+            jogador = conf.jogador
+            
+            # Verificar cool-down (últimas 2 semanas)
+            elegivel = True
+            duas_semanas_atras = date.today() - timedelta(weeks=2)
+            ultimas_semanas = Semana.query.filter(
+                Semana.data >= duas_semanas_atras,
+                Semana.draft_finalizado == True
+            ).all()
+            
+            for s in ultimas_semanas:
+                if Time.query.filter_by(semana_id=s.id, capitao_id=jogador.id).first():
+                    elegivel = False
+                    break
+            
+            if elegivel:
+                jogadores_elegiveis.append({
+                    'id': jogador.id,
+                    'nome': jogador.nome,
+                    'mensalista': jogador.mensalista,
+                    'capitao_fixo': jogador.capitao,
+                    'pontuacao': 0
+                })
+        
+        if len(jogadores_elegiveis) < semana.max_times:
+            return jsonify({
+                'success': False, 
+                'message': f'Precisa de pelo menos {semana.max_times} jogadores elegíveis! Disponíveis: {len(jogadores_elegiveis)}'
+            })
+        
+        # Calcular pontuações
+        for jogador in jogadores_elegiveis:
+            pontuacao = 0
+            if jogador['mensalista']:
+                pontuacao += 100
+            if jogador['capitao_fixo']:
+                pontuacao += 50
+            
+            # Contar vezes que já foi capitão
+            vezes_capitao = Time.query.filter_by(capitao_id=jogador['id']).count()
+            pontuacao -= vezes_capitao * 20  # Penalidade maior para quem já foi muito
+            
+            # Adicionar aleatoriedade controlada
+            pontuacao += secrets.randbelow(50)
+            
+            jogador['pontuacao'] = pontuacao
+        
+        # Ordenar por pontuação
+        jogadores_elegiveis.sort(key=lambda x: x['pontuacao'], reverse=True)
+        
+        # Selecionar os melhores
+        capitaes_selecionados = jogadores_elegiveis[:semana.max_times]
+        
+        # Criar times para cada capitão
+        cores = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+        times_criados = []
+        
+        for i, capitao_info in enumerate(capitaes_selecionados):
+            # 1. Primeiro cria o TIME
+            time = Time(
+                semana_id=semana.id,
+                nome=f'Time {i+1}',
+                capitao_id=capitao_info['id'],
+                ordem_escolha=i+1,
+                cor=cores[i % len(cores)]
+            )
+            db.session.add(time)
+            db.session.flush()  # Gera o ID do time sem commit total
+            
+            times_criados.append(time)  # Guarda referência
+            
+            # 2. DEPOIS cria a escolha do draft COM O TIME_ID VÁLIDO
+            escolha = EscolhaDraft(
+                semana_id=semana.id,
+                jogador_id=capitao_info['id'],
+                time_id=time.id,  # AGORA tem um time_id válido!
+                ordem_escolha=i+1,
+                round_num=0,
+                escolhido_em=datetime.utcnow()
+            )
+            db.session.add(escolha)
+            
+            # 3. Registra no histórico
+            historico = HistoricoDraft(
+                semana_id=semana.id,
+                jogador_id=capitao_info['id'],
+                time_id=time.id,
+                acao='sorteio_capitao',
+                detalhes=f'Selecionado como capitão via sorteio automático'
+            )
+            db.session.add(historico)
+        
+        # Fechar lista automaticamente após formar times
+        semana.lista_aberta = False
+        semana.lista_encerrada = True
+        
+        db.session.commit()
+        
+        # Log do sorteio
+        nomes_capitaes = [c['nome'] for c in capitaes_selecionados]
+        print(f"✅ Sorteio realizado para semana {semana.id}: {', '.join(nomes_capitaes)}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Sorteio realizado com sucesso! {len(capitaes_selecionados)} capitães selecionados.',
+            'capitaes': nomes_capitaes
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro no sorteio: {e}")
+        return jsonify({'success': False, 'message': f'Erro ao realizar sorteio: {str(e)}'})
+    
+@app.route('/admin/sorteio_capitaes/<int:semana_id>/definir_manual', methods=['POST'])
+@admin_required
+def definir_capitaes_manual(semana_id):
+    """Define capitães manualmente"""
+    semana = Semana.query.get_or_404(semana_id)
+    data = request.get_json()
+    capitaes_ids = data.get('capitaes_ids', [])
+    
+    if not capitaes_ids:
+        return jsonify({'success': False, 'message': 'Nenhum jogador selecionado!'})
+    
+    if len(capitaes_ids) != semana.max_times:
+        return jsonify({
+            'success': False, 
+            'message': f'Selecione exatamente {semana.max_times} jogadores!'
+        })
+    
+    try:
+        # Remover times existentes se houver
+        Time.query.filter_by(semana_id=semana.id).delete()
+        EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
+        
+        # Criar novos times
+        cores = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+        times_criados = []
+        
+        for i, capitao_id in enumerate(capitaes_ids):
+            jogador = Jogador.query.get(capitao_id)
+            if not jogador:
+                continue
+                
+            # 1. Cria o TIME primeiro
+            time = Time(
+                semana_id=semana.id,
+                nome=f'Time {i+1}',
+                capitao_id=capitao_id,
+                ordem_escolha=i+1,
+                cor=cores[i % len(cores)]
+            )
+            db.session.add(time)
+            db.session.flush()  # Gera ID sem commit total
+            
+            times_criados.append(time)
+            
+            # 2. DEPOIS cria a escolha do draft
+            escolha = EscolhaDraft(
+                semana_id=semana.id,
+                jogador_id=capitao_id,
+                time_id=time.id,  # AGORA tem time_id válido
+                ordem_escolha=i+1,
+                round_num=0,
+                escolhido_em=datetime.utcnow()
+            )
+            db.session.add(escolha)
+            
+            # 3. Registro histórico
+            historico = HistoricoDraft(
+                semana_id=semana.id,
+                jogador_id=capitao_id,
+                time_id=time.id,
+                acao='capitao_manual',
+                detalhes=f'Definido como capitão manualmente pelo admin'
+            )
+            db.session.add(historico)
+        
+        # Fechar lista automaticamente
+        semana.lista_aberta = False
+        semana.lista_encerrada = True
+        
+        db.session.commit()
+        
+        # Obter nomes dos capitães
+        capitaes_nomes = []
+        for capitao_id in capitaes_ids:
+            jogador = Jogador.query.get(capitao_id)
+            if jogador:
+                capitaes_nomes.append(jogador.nome)
+        
+        print(f"✅ Capitães definidos manualmente: {', '.join(capitaes_nomes)}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'{len(capitaes_ids)} capitães definidos manualmente!',
+            'capitaes': capitaes_nomes
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao definir capitães manualmente: {e}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
+
+@app.route('/api/draft/trocar_capitao', methods=['POST'])
+@admin_required
+def trocar_capitao_time():
+    """Troca o capitão de um time - FUNCIONA DURANTE O DRAFT"""
+    data = request.get_json()
+    semana_id = data.get('semana_id')
+    time_id = data.get('time_id')
+    novo_capitao_id = data.get('novo_capitao_id')
+    
+    if not all([semana_id, time_id, novo_capitao_id]):
+        return jsonify({'success': False, 'message': 'Dados incompletos!'})
+    
+    try:
+        semana = Semana.query.get(semana_id)
+        time = Time.query.get(time_id)
+        novo_capitao = Jogador.query.get(novo_capitao_id)
+        
+        if not all([semana, time, novo_capitao]):
+            return jsonify({'success': False, 'message': 'Registro não encontrado!'})
+        
+        # Verificar se o novo capitão está confirmado
+        confirmacao = Confirmacao.query.filter_by(
+            semana_id=semana.id,
+            jogador_id=novo_capitao_id,
+            confirmado=True
+        ).first()
+        
+        if not confirmacao:
+            return jsonify({'success': False, 'message': 'Jogador não confirmado!'})
+        
+        # Verificar se já é capitão em outro time
+        time_existente = Time.query.filter_by(
+            semana_id=semana.id,
+            capitao_id=novo_capitao_id
+        ).first()
+        
+        if time_existente and time_existente.id != time.id:
+            return jsonify({
+                'success': False, 
+                'message': 'Este jogador já é capitão em outro time!'
+            })
+        
+        # Salvar o capitão antigo
+        capitao_antigo_id = time.capitao_id
+        capitao_antigo = Jogador.query.get(capitao_antigo_id)
+        
+        # IMPORTANTE: Atualizar status de capitão
+        # 1. Desmarcar capitão antigo
+        if capitao_antigo:
+            capitao_antigo.capitao = False
+            # Se tinha usuário, atualizar role
+            if capitao_antigo.user and capitao_antigo.user.role == 'capitao':
+                capitao_antigo.user.role = 'jogador'
+        
+        # 2. Marcar novo capitão
+        novo_capitao.capitao = True
+        if novo_capitao.user:
+            novo_capitao.user.role = 'capitao'
+        
+        # Trocar capitão no time
+        time.capitao_id = novo_capitao_id
+        
+        # Atualizar a escolha do draft
+        escolha_antiga = EscolhaDraft.query.filter_by(
+            semana_id=semana.id,
+            jogador_id=capitao_antigo_id,
+            time_id=time.id
+        ).first()
+        
+        if escolha_antiga:
+            # Atualizar a escolha existente
+            escolha_antiga.jogador_id = novo_capitao_id
+            escolha_antiga.escolhido_em = datetime.utcnow()
+        else:
+            # Criar nova escolha
+            nova_escolha = EscolhaDraft(
+                semana_id=semana.id,
+                jogador_id=novo_capitao_id,
+                time_id=time.id,
+                ordem_escolha=time.ordem_escolha,
+                round_num=0,
+                escolhido_em=datetime.utcnow()
+            )
+            db.session.add(nova_escolha)
+        
+        # Se o draft está em andamento, atualizar vez_capitao se necessário
+        if semana.draft_em_andamento:
+            draft_status = DraftStatus.query.filter_by(semana_id=semana.id).first()
+            if draft_status and draft_status.vez_capitao_id == capitao_antigo_id:
+                draft_status.vez_capitao_id = novo_capitao_id
+        
+        # Registro no histórico
+        historico = HistoricoDraft(
+            semana_id=semana.id,
+            jogador_id=novo_capitao_id,
+            time_id=time.id,
+            acao='capitao_trocado',
+            detalhes=f'Capitão trocado de {capitao_antigo.nome if capitao_antigo else "Desconhecido"} para {novo_capitao.nome}'
+        )
+        db.session.add(historico)
+        
+        db.session.commit()
+        
+        # Emitir atualização via SocketIO se draft em andamento
+        if semana.draft_em_andamento:
+            try:
+                socketio.emit('draft_update', {
+                    'semana_id': semana.id,
+                    'acao': 'capitao_trocado',
+                    'time_id': time.id,
+                    'capitao_antigo_id': capitao_antigo_id,
+                    'novo_capitao_id': novo_capitao_id,
+                    'time_nome': time.nome
+                }, room=f'draft_{semana.id}')
+                
+                # Emitir status completo atualizado
+                emitir_status_draft_atualizado(semana.id)
+            except Exception as e:
+                print(f"⚠️ Erro ao emitir atualização SocketIO: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Capitão trocado! Agora {novo_capitao.nome} comanda o {time.nome}.',
+            'capitao_antigo_nome': capitao_antigo.nome if capitao_antigo else 'Desconhecido',
+            'novo_capitao_nome': novo_capitao.nome
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao trocar capitão: {e}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
+
+@app.route('/api/sorteio_capitaes/<int:semana_id>/jogadores_disponiveis')
+@admin_required
+def api_jogadores_disponiveis_troca(semana_id):
+    """API para obter jogadores disponíveis para troca de capitão"""
+    semana = Semana.query.get_or_404(semana_id)
+    
+    # Buscar todos os jogadores confirmados
+    confirmacoes = Confirmacao.query.filter_by(
+        semana_id=semana.id,
+        confirmado=True
+    ).all()
+    
+    jogadores_info = []
+    for conf in confirmacoes:
+        jogador = conf.jogador
+        
+        # Verificar se já é capitão em algum time
+        ja_eh_capitao = Time.query.filter_by(
+            semana_id=semana.id,
+            capitao_id=jogador.id
+        ).first() is not None
+        
+        if not ja_eh_capitao:
+            # Verificar elegibilidade
+            elegivel = True
+            duas_semanas_atras = date.today() - timedelta(weeks=2)
+            ultimas_semanas = Semana.query.filter(
+                Semana.data >= duas_semanas_atras,
+                Semana.draft_finalizado == True
+            ).all()
+            
+            for s in ultimas_semanas:
+                if Time.query.filter_by(semana_id=s.id, capitao_id=jogador.id).first():
+                    elegivel = False
+                    break
+            
+            # Contar vezes que já foi capitão
+            vezes_capitao = Time.query.filter_by(capitao_id=jogador.id).count()
+            
+            jogadores_info.append({
+                'id': jogador.id,
+                'nome': jogador.nome,
+                'apelido': jogador.apelido,
+                'posicao': jogador.posicao,
+                'mensalista': jogador.mensalista,
+                'capitao': jogador.capitao,  # Capitão fixo no sistema
+                'elegivel': elegivel,
+                'vezes_capitao': vezes_capitao
+            })
+    
+    return jsonify({
+        'success': True,
+        'jogadores': jogadores_info
+    })
+    
+@app.route('/admin/sorteio_capitaes/<int:semana_id>/limpar', methods=['POST'])
+@admin_required
+def limpar_sorteio_capitaes(semana_id):
+    """Limpa completamente o sorteio de capitães"""
+    semana = Semana.query.get_or_404(semana_id)
+    
+    # Verificar se já há draft
+    if semana.draft_em_andamento or semana.draft_finalizado:
+        return jsonify({
+            'success': False, 
+            'message': 'Não é possível limpar sorteio com draft em andamento!'
+        })
+    
+    try:
+        # Remover todos os times e escolhas
+        Time.query.filter_by(semana_id=semana.id).delete()
+        EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
+        
+        # Reabrir lista
+        semana.lista_aberta = True
+        semana.lista_encerrada = False
+        
+        db.session.commit()
+        
+        print(f"✅ Sorteio limpo para semana {semana.id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sorteio limpo com sucesso! Lista reaberta.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao limpar sorteio: {e}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
+
+@app.route('/admin/sorteio_capitaes/<int:semana_id>/remover_time/<int:time_id>', methods=['DELETE'])
+@admin_required
+def remover_time_sorteio(semana_id, time_id):
+    """Remove um time específico - VERIFICA SE PODE REMOVER DURANTE DRAFT"""
+    semana = Semana.query.get_or_404(semana_id)
+    time = Time.query.get_or_404(time_id)
+    
+    # Verificar se pode remover durante draft
+    if semana.draft_em_andamento:
+        # Verifica se o time já fez escolhas
+        escolhas_time = EscolhaDraft.query.filter_by(
+            semana_id=semana.id,
+            time_id=time_id
+        ).count()
+        
+        if escolhas_time > 1:  # Mais do que apenas o capitão
+            return jsonify({
+                'success': False, 
+                'message': 'Não é possível remover time durante o draft se já foram feitas escolhas!'
+            })
+    
+    try:
+        # Se for capitão, remover status de capitão
+        if time.capitao_id:
+            capitao = Jogador.query.get(time.capitao_id)
+            if capitao and capitao.capitao:
+                capitao.capitao = False
+                if capitao.user and capitao.user.role == 'capitao':
+                    capitao.user.role = 'jogador'
+        
+        # Remover escolhas associadas
+        EscolhaDraft.query.filter_by(
+            semana_id=semana.id,
+            time_id=time_id
+        ).delete()
+        
+        # Remover o time
+        db.session.delete(time)
+        
+        # Se o draft está em andamento e este era o time da vez, atualizar
+        if semana.draft_em_andamento:
+            draft_status = DraftStatus.query.filter_by(semana_id=semana.id).first()
+            if draft_status and draft_status.vez_capitao_id == time.capitao_id:
+                # Encontrar próximo time
+                times_restantes = Time.query.filter_by(semana_id=semana.id).order_by(Time.ordem_escolha).all()
+                if times_restantes:
+                    draft_status.vez_capitao_id = times_restantes[0].capitao_id
+                else:
+                    # Se não há mais times, finalizar draft
+                    draft_status.finalizado = True
+                    semana.draft_em_andamento = False
+        
+        # Se não há mais times, reabrir lista
+        remaining_times = Time.query.filter_by(semana_id=semana.id).count()
+        if remaining_times == 0:
+            semana.lista_aberta = True
+            semana.lista_encerrada = False
+            if semana.draft_em_andamento:
+                semana.draft_em_andamento = False
+        
+        db.session.commit()
+        
+        print(f"✅ Time {time_id} removido da semana {semana.id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Time removido com sucesso!',
+            'draft_atualizado': semana.draft_em_andamento
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao remover time: {e}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'})
+    
+@app.route('/admin/verificar_inconsistencias/<int:semana_id>')
+@admin_required
+def verificar_inconsistencias(semana_id):
+    """Verifica e corrige inconsistências entre times, capitães e permissões"""
+    semana = Semana.query.get_or_404(semana_id)
+    
+    correcoes = []
+    
+    # 1. Verificar se todos os capitães dos times estão marcados como capitães
+    times = Time.query.filter_by(semana_id=semana.id).all()
+    capitaes_times = []
+    
+    for time in times:
+        if time.capitao_id:
+            capitaes_times.append(time.capitao_id)
+            jogador = Jogador.query.get(time.capitao_id)
+            if jogador and not jogador.capitao:
+                jogador.capitao = True
+                if jogador.user:
+                    jogador.user.role = 'capitao'
+                correcoes.append(f"Capitão {jogador.nome} marcado como capitão no sistema")
+    
+    # 2. Verificar se há jogadores marcados como capitães que não são capitães de time
+    capitaes_sistema = Jogador.query.filter_by(capitao=True, ativo=True).all()
+    for capitao in capitaes_sistema:
+        if capitao.id not in capitaes_times:
+            capitao.capitao = False
+            if capitao.user and capitao.user.role == 'capitao':
+                capitao.user.role = 'jogador'
+            correcoes.append(f"Jogador {capitao.nome} desmarcado como capitão (não é capitão de time)")
+    
+    if correcoes:
+        db.session.commit()
+        flash(f'{len(correcoes)} correções aplicadas!', 'success')
+        for correcao in correcoes:
+            flash(correcao, 'info')
+    else:
+        flash('Nenhuma inconsistência encontrada!', 'info')
+    
+    return redirect(url_for('admin_sorteio_capitaes', semana_id=semana_id))    
+
+@app.route('/admin/sincronizar_capitaes_semana/<int:semana_id>')
+@admin_required
+def sincronizar_capitaes_semana(semana_id):
+    """Sincroniza capitães de uma semana específica"""
+    semana = Semana.query.get_or_404(semana_id)
+    
+    times = Time.query.filter_by(semana_id=semana.id).all()
+    
+    atualizados = 0
+    for time in times:
+        if time.capitao_id:
+            jogador = Jogador.query.get(time.capitao_id)
+            if jogador and not jogador.capitao:
+                # Tornar jogador um capitão fixo no sistema
+                jogador.capitao = True
+                atualizados += 1
+    
+    if atualizados > 0:
+        db.session.commit()
+        flash(f'{atualizados} jogadores sincronizados como capitães fixos!', 'success')
+    else:
+        flash('Todos os capitães já estão sincronizados!', 'info')
+    
+    return redirect(url_for('admin_sorteio_capitaes', semana_id=semana_id))
+
+
+
+    
 @app.route('/admin/debug_ciclo')
 @admin_required
 def debug_ciclo():
@@ -5602,6 +6445,7 @@ def capitao_escolher():
     draft_status = DraftStatus.query.filter_by(semana_id=semana.id).first()
     if not draft_status or draft_status.vez_capitao_id != current_user.jogador_id:
         return jsonify({'success': False, 'message': 'Não é a sua vez de escolher!'})
+    print("tick", semana.id, draft_status.tempo_restante)
     
     # Busca time do capitão PARA ESTA SEMANA
     time = Time.query.filter_by(
@@ -6415,10 +7259,12 @@ def utility_processor():
         'get_dia_semana_curto': get_dia_semana_curto,
         'obter_ciclo_das_configuracoes': obter_ciclo_das_configuracoes,
         'obter_jogadores_no_ciclo_atual': obter_jogadores_no_ciclo_atual,
+        'get_dia_semana_curto': get_dia_semana_curto,
+        'format_date': format_date_func,
         
     }
 
-@app.route('/')
+@app.route('/', endpoint='index')
 def index():
     """PÁGINA PRINCIPAL - MODIFICADA PARA MOSTRAR MÚLTIPLAS SEMANAS"""
     # Busca próximas semanas (próximos 14 dias)
@@ -7142,13 +7988,8 @@ with app.app_context():
     
 
 # ======================================================
-# EXECUÇÃO
+# EXECUÇÃO - CORREÇÃO CRÍTICA
 # ======================================================
 
 if __name__ == "__main__":
-    socketio.run(
-        app,
-        host="0.0.0.0",
-        port=5000,
-        debug=False
-    )
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, allow_unsafe_werkzeug=True)

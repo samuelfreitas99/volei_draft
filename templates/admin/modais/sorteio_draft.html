@@ -1,0 +1,227 @@
+<!-- Modal para Configurar Draft (igual ao do dashboard) -->
+<div class="modal fade" id="configDraftModal" tabindex="-1" aria-labelledby="configDraftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="configDraftModalLabel">
+                    <i class="fas fa-cog me-2"></i>Configurar Draft
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formIniciarDraft" action="{{ url_for('iniciar_draft') }}" method="POST">
+                <input type="hidden" name="semana_id" value="{{ semana.id }}">
+                
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Pronto para iniciar o draft!</strong> Configure os parâmetros abaixo.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <!-- Modo do Draft -->
+                        <div class="col-md-6">
+                            <label class="form-label">Modo do Draft</label>
+                            <select class="form-select" name="modo_draft">
+                                <option value="snake" selected>Snake (reversão)</option>
+                                <option value="linear">Linear (sempre mesma ordem)</option>
+                            </select>
+                            <div class="form-text">
+                                <strong>Snake:</strong> 1-2-3-3-2-1<br>
+                                <strong>Linear:</strong> 1-2-3-1-2-3
+                            </div>
+                        </div>
+                        
+                        <!-- Tempo por Escolha -->
+                        <div class="col-md-6">
+                            <label class="form-label">Tempo por Escolha (segundos)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" name="tempo_por_escolha" 
+                                       value="0" min="0" max="120" step="5">
+                                <span class="input-group-text">seg</span>
+                            </div>
+                            <div class="form-text">
+                                <strong>0 = sem tempo limite</strong><br>
+                                Recomendado: 0 (sem timer) ou 30-60 segundos
+                            </div>
+                        </div>
+                        
+                        <!-- Número de Times -->
+                        <div class="col-md-6">
+                            <label class="form-label">Número de Times</label>
+                            <input type="number" class="form-control" name="max_times" 
+                                   value="{{ semana.max_times }}" min="2" max="6" readonly>
+                            <div class="form-text">
+                                Definido pelos capitães sorteados
+                            </div>
+                        </div>
+                        
+                        <!-- Jogadores por Time -->
+                        <div class="col-md-6">
+                            <label class="form-label">Jogadores por Time</label>
+                            <input type="number" class="form-control" name="max_jogadores_por_time" 
+                                   value="{{ semana.max_jogadores_por_time }}" min="4" max="8">
+                            <div class="form-text">
+                                Recomendado: 6 jogadores por time
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Resumo -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6><i class="fas fa-list-check me-2"></i>Resumo do Draft</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Times formados:</small>
+                                <strong>{{ times_existentes|length }} times</strong>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Jogadores confirmados:</small>
+                                <strong>{{ jogadores_sorteio|length }} jogadores</strong>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Vagas totais:</small>
+                                <strong id="vagasTotais">{{ times_existentes|length * semana.max_jogadores_por_time }} vagas</strong>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">Status:</small>
+                                <span class="badge bg-success" id="statusDraft">
+                                    {% if jogadores_sorteio|length >= (times_existentes|length * semana.max_jogadores_por_time) %}
+                                    ✅ Pronto para iniciar
+                                    {% else %}
+                                    ⚠️ Aguardando mais jogadores
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success" 
+                            id="btnConfirmarInicioDraft"
+                            {% if jogadores_sorteio|length < (times_existentes|length * semana.max_jogadores_por_time) %}disabled{% endif %}>
+                        <i class="fas fa-play me-2"></i>Iniciar Draft
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Configurar submissão do formulário do modal
+document.addEventListener('DOMContentLoaded', function() {
+    const formDraft = document.getElementById('formIniciarDraft');
+    if (formDraft) {
+        formDraft.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Iniciando...';
+            btn.disabled = true;
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    // Se houve redirecionamento, seguir para a nova página
+                    window.location.href = response.url;
+                    return '';
+                }
+                return response.text();
+            })
+            .then(html => {
+                if (html) {
+                    // Verifica se há mensagem de erro/sucesso no response
+                    if (html.includes('alert-success') || html.includes('Draft iniciado')) {
+                        showToast('success', 'Draft iniciado com sucesso!', 3000);
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('admin_dashboard', semana_id=semana.id) }}";
+                        }, 1500);
+                    } else if (html.includes('alert-danger') || html.includes('Erro')) {
+                        showToast('danger', 'Erro ao iniciar draft!', 4000);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                }
+            })
+            .catch(error => {
+                showToast('danger', 'Erro de rede: ' + error.message, 4000);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        });
+    }
+});
+
+// Atualizar vagas totais quando mudar jogadores por time
+document.querySelector('[name="max_jogadores_por_time"]').addEventListener('change', function(e) {
+    const times = {{ times_existentes|length }};
+    const jogadoresPorTime = parseInt(e.target.value);
+    const vagasTotais = times * jogadoresPorTime;
+    
+    document.getElementById('vagasTotais').textContent = vagasTotais + ' vagas';
+    
+    // Atualizar status
+    const confirmados = {{ jogadores_sorteio|length }};
+    const statusDraft = document.getElementById('statusDraft');
+    const btnConfirmar = document.getElementById('btnConfirmarInicioDraft');
+    
+    if (confirmados >= vagasTotais) {
+        statusDraft.innerHTML = '✅ Pronto para iniciar';
+        statusDraft.className = 'badge bg-success';
+        btnConfirmar.disabled = false;
+    } else {
+        statusDraft.innerHTML = `⚠️ Faltam ${vagasTotais - confirmados} jogadores`;
+        statusDraft.className = 'badge bg-warning';
+        btnConfirmar.disabled = true;
+    }
+});
+
+// Configurar submissão do formulário
+document.getElementById('formIniciarDraft').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const btn = this.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Iniciando...';
+    btn.disabled = true;
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Verifica se há mensagem de erro/sucesso no response
+        if (html.includes('alert-success') || html.includes('Draft iniciado')) {
+            showToast('success', 'Draft iniciado com sucesso!', 3000);
+            setTimeout(() => {
+                window.location.href = "{{ url_for('admin_dashboard', semana_id=semana.id) }}";
+            }, 1500);
+        } else if (html.includes('alert-danger') || html.includes('Erro')) {
+            showToast('danger', 'Erro ao iniciar draft!', 4000);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        } else {
+            // Redireciona para dashboard
+            window.location.href = "{{ url_for('admin_dashboard', semana_id=semana.id) }}";
+        }
+    })
+    .catch(error => {
+        showToast('danger', 'Erro: ' + error.message, 4000);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+});
+</script>

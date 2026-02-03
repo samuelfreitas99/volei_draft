@@ -1,84 +1,130 @@
-<!-- Modal Configuração Draft -->
-<div class="modal fade admin-modal" id="configDraftModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<!-- admin/modais/config_draft.html -->
+<div class="modal fade" id="configDraftModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">
-                    <i class="fas fa-cog me-2"></i>Configurar Draft
+                    <i class="fas fa-play-circle me-2"></i>Iniciar Draft
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('iniciar_draft') }}">
+            <form id="configDraftForm" method="POST" action="{{ url_for('iniciar_draft') }}">
                 <input type="hidden" name="semana_id" value="{{ semana.id }}">
+                
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="max_times" class="form-label">Número de Times</label>
-                            <select class="form-select" id="max_times" name="max_times" required>
-                                {% for num in [2, 3, 4, 5, 6] %}
-                                <option value="{{ num }}" {% if semana.max_times==num %}selected{% endif %}>
-                                    {{ num }} Times
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="max_jogadores_por_time" class="form-label">Jogadores por Time</label>
-                            <select class="form-select" id="max_jogadores_por_time" name="max_jogadores_por_time" required>
-                                {% for num in [4, 5, 6, 7, 8, 9, 10] %}
-                                <option value="{{ num }}" {% if semana.max_jogadores_por_time==num %}selected{% endif %}>
-                                    {{ num }} jogadores
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Configure os parâmetros do draft antes de iniciar.
                     </div>
-
+                    
+            <!-- Status atual - CORRIGIDO -->
+            <div class="card mb-3 border-info">
+                <div class="card-header bg-info text-white py-2">
+                    <small><i class="fas fa-clipboard-check me-2"></i>Status Atual</small>
+                </div>
+                <div class="card-body p-3">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="modo_draft" class="form-label">Modo do Draft</label>
-                            <select class="form-select" id="modo_draft" name="modo_draft" required>
-                                <option value="snake" {% if semana.modo_draft=='snake' %}selected{% endif %}>
-                                    Snake Draft (recomendado)
-                                </option>
-                                <option value="linear" {% if semana.modo_draft=='linear' %}selected{% endif %}>
-                                    Linear
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tempo por Escolha</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">
-                                    <i class="fas fa-clock text-muted"></i>
-                                </span>
-                                <input type="text" class="form-control bg-light" value="Sem tempo limite" readonly>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Capitães definidos</small>
+                                <span id="capitaesAtual" class="fw-bold">{{ capitaes_formados|default(0) }}/{{ semana.max_times }}</span>
+                                {% if times_formados %}
+                                <br><small class="text-muted">Times criados: {{ times_formados|length }}</small>
+                                {% endif %}
                             </div>
-                            <div class="form-text small">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Draft sem contador de tempo (configuração fixa)
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Jogadores confirmados</small>
+                                <span id="jogadoresAtual" class="fw-bold">{{ confirmados }}/{{ semana.max_times * semana.max_jogadores_por_time }}</span>
                             </div>
                         </div>
                     </div>
-
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle me-2"></i>Requisitos para iniciar:</h6>
-                        <ul class="mb-0">
-                            <li>Lista de presença fechada <i class="fas fa-check text-success"></i></li>
-                            <li>Capitães confirmados: 
-                                <span id="capitaesAtual">{{ total_capitaes }}</span>/<span id="capitaesNecessarios">{{ semana.max_times }}</span>
-                            </li>
-                            <li>Jogadores confirmados: 
-                                <span id="jogadoresAtual">{{ confirmados }}</span>/<span id="jogadoresNecessarios">{{ semana.max_times * semana.max_jogadores_por_time }}</span>
-                            </li>
-                        </ul>
+                    {% if times_formados and times_formados|length > 0 %}
+                    <div class="alert alert-success mt-2 mb-0 py-2">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <small>Times já formados! Capitães: 
+                            {% for time in times_formados[:3] %}
+                                {{ time.capitao.nome if time.capitao else 'Sem capitão' }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                            {% if times_formados|length > 3 %} e mais {{ times_formados|length - 3 }}...{% endif %}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+                    
+                    <!-- Configurações -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-users me-2"></i>Número de Times
+                        </label>
+                        <input type="number" class="form-control" name="max_times" 
+                               id="max_times" value="{{ times|length if times|length >= 2 else 2 }}" 
+                               min="2" max="6" required>
+                        <div class="form-text">
+                            <small>Mínimo: 2 times | Máximo: 6 times</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-user-friends me-2"></i>Jogadores por Time
+                        </label>
+                        <input type="number" class="form-control" name="max_jogadores_por_time" 
+                               id="max_jogadores_por_time" value="{{ semana.max_jogadores_por_time }}" 
+                               min="4" max="12" required>
+                        <div class="form-text">
+                            <small>Recomendado: 6 jogadores por time</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-clock me-2"></i>Tempo por Escolha (segundos)
+                        </label>
+                        <input type="number" class="form-control" name="tempo_por_escolha" 
+                               value="{{ semana.tempo_escolha }}" min="0" max="120">
+                        <div class="form-text">
+                            <small>0 = tempo ilimitado</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-random me-2"></i>Modo do Draft
+                        </label>
+                        <select class="form-select" name="modo_draft">
+                            <option value="linear" {% if semana.modo_draft == 'linear' %}selected{% endif %}>
+                                Linear (sempre mesma ordem)
+                            </option>
+                            <option value="snake" {% if semana.modo_draft == 'snake' %}selected{% endif %}>
+                                Snake (alterna a cada rodada)
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <!-- Resumo dos requisitos -->
+                    <div class="alert alert-warning" id="requisitosAlert">
+                        <div class="d-flex">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1">Requisitos para iniciar:</h6>
+                                <p class="mb-1" id="requisitosTexto">
+                                    • <span id="capitaesNecessarios">{{ times|length if times|length >= 2 else 2 }}</span> capitães<br>
+                                    • <span id="jogadoresNecessarios">{{ (times|length if times|length >= 2 else 2) * semana.max_jogadores_por_time }}</span> jogadores confirmados
+                                </p>
+                                <small class="text-muted" id="statusIniciar"></small>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success" id="iniciarDraftBtn">
                         <i class="fas fa-play me-2"></i>Iniciar Draft
                     </button>
                 </div>

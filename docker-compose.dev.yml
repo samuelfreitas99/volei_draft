@@ -11,7 +11,13 @@ services:
       - FLASK_DEBUG=1
     volumes:
       - /srv/volei_draft:/app
-    command: flask run --host=0.0.0.0 --port=5000
+    command: >
+      gunicorn
+      -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker
+      -w 1
+      -b 0.0.0.0:5000
+      app:app
+
     networks:
       - dev-network
 

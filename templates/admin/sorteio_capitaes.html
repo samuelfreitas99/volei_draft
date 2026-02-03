@@ -1,0 +1,1445 @@
+<!-- admin/sorteio_capitaes.html -->
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<style>
+    /* Estilos personalizados - MANTIDOS */
+    .capitao-badge {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .mensalista-badge {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .jogador-card {
+        border: 2px solid transparent;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+    
+    .jogador-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .jogador-card.selecionado {
+        border-color: #3498db;
+        background-color: #f8f9fa;
+    }
+    
+    .jogador-card.nao-elegivel {
+        opacity: 0.6;
+        position: relative;
+        overflow: hidden;
+        background-color: #f8f9fa;
+    }
+    
+    .jogador-card.nao-elegivel::before {
+        content: "COOL-DOWN";
+        position: absolute;
+        top: 10px;
+        right: -30px;
+        background: #e74c3c;
+        color: white;
+        padding: 3px 30px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        transform: rotate(45deg);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .status-ativo { background-color: #2ecc71; }
+    .status-pendente { background-color: #f1c40f; }
+    .status-inativo { background-color: #e74c3c; }
+    
+    .pontuacao-badge {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        color: white;
+        font-weight: bold;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+    }
+    
+    .time-badge {
+        background: #3498db;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+    
+    /* NOVO: Estilo para jogador desabilitado */
+    .jogador-desabilitado {
+        pointer-events: none;
+        opacity: 0.4;
+    }
+    
+    /* Layout responsivo */
+    @media (max-width: 768px) {
+        .card-header h4 {
+            font-size: 1.2rem;
+        }
+        
+        .jogador-card {
+            margin-bottom: 8px;
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .btn-group .btn {
+            width: 100%;
+            margin: 2px 0;
+        }
+    }
+    
+    /* Animações */
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    /* Progress bar customizada */
+    .progress-capitao {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-capitao-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #2980b9);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    
+    /* Estilos para modal de escolha inicial */
+    .modal-escolha .modal-dialog {
+        max-width: 500px;
+    }
+    
+    .modal-escolha .btn-option {
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .modal-escolha .btn-option:hover {
+        border-color: #3498db;
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .modal-escolha .btn-option.active {
+        border-color: #3498db;
+        background-color: #f8f9fa;
+    }
+    
+    .modal-escolha .btn-option i {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="container-fluid py-3 py-md-4">
+    <!-- Cabeçalho com estatísticas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-gradient-primary py-3">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <div class="mb-2 mb-md-0">
+                            <h4 class="mb-1">
+                                <i class="fas fa-crown me-2"></i>Sorteio de Capitães
+                            </h4>
+                            {% if mensagem_draft %}
+                            <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                {{ mensagem_draft }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endif %}
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="badge bg-white text-primary">
+                                    <i class="fas fa-calendar me-1"></i>{{ format_date(semana.data) }}
+                                </span>
+                                <span class="badge bg-white text-primary">
+                                    <i class="fas fa-users me-1"></i>{{ get_dia_semana_curto(semana.data.weekday()) }}
+                                </span>
+                                {% if times_existentes|length > 0 %}
+                                <span class="badge bg-white text-primary">
+                                    <i class="fas fa-flag me-1"></i>{{ times_existentes|length }} times
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <!-- Botões condicionais -->
+                            {% if not semana.lista_aberta and not semana.draft_em_andamento and not semana.draft_finalizado %}
+                                {% if times_existentes|length == 0 %}
+                                    <!-- Modal trigger para escolha inicial -->
+                                    <button class="btn btn-success btn-sm" onclick="abrirModalEscolhaInicial()">
+                                        <i class="fas fa-play me-1"></i>Começar Sorteio
+                                    </button>
+                                {% else %}
+                                    {% if times_existentes|length < quantidade_capitaes %}
+                                        <button class="btn btn-outline-primary btn-sm" onclick="abrirModalEscolhaManual()">
+                                            <i class="fas fa-hand-point-up me-1"></i>Adicionar Capitão
+                                        </button>
+                                        <button class="btn btn-success btn-sm" onclick="realizarSorteio()">
+                                            <i class="fas fa-random me-1"></i>Completar Sorteio
+                                        </button>
+                                    {% endif %}
+
+                                    {% if times_existentes|length >= quantidade_capitaes %}
+                                        <a href="{{ url_for('configurar_draft', semana_id=semana.id) }}" class="btn btn-info btn-sm">
+                                            <i class="fas fa-cog me-1"></i>Configurar Draft
+                                        </a>
+                                        <button class="btn btn-success btn-sm pulse" onclick="iniciarDraftDireto()">
+                                            <i class="fas fa-play me-1"></i>Iniciar Draft
+                                        </button>
+                                    {% endif %}
+                                    {% if times_existentes|length >= quantidade_capitaes %}
+                                        <button class="btn btn-warning btn-sm pulse" onclick="iniciarDraftDireto()">
+                                            <i class="fas fa-play me-1"></i>Iniciar Draft
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+                            
+                            <!-- Botão sincronizar capitães -->
+                            <button class="btn btn-warning btn-sm" onclick="verificarInconsistencias()" title="Verificar inconsistências">
+                                <i class="fas fa-check-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body py-3">
+                    <div class="row g-3">
+                        <!-- Estatísticas principais -->
+                        <div class="col-md-3 col-6">
+                            <div class="text-center">
+                                <div class="display-6 fw-bold text-primary">{{ jogadores_sorteio|length }}</div>
+                                <small class="text-muted">Jogadores Confirmados</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="text-center">
+                                <div class="display-6 fw-bold text-success">{{ quantidade_capitaes }}</div>
+                                <small class="text-muted">Capitães Necessários</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="text-center">
+                                <div class="display-6 fw-bold" style="color: #e74c3c;">
+                                    {{ jogadores_sorteio|selectattr('elegivel')|list|length }}
+                                </div>
+                                <small class="text-muted">Elegíveis (fora do cool-down)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="text-center">
+                                <div class="display-6 fw-bold" style="color: #f39c12;">{{ times_existentes|length }}</div>
+                                <small class="text-muted">Times Formados</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Barra de progresso -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Progresso do Sorteio</small>
+                            <small>{{ times_existentes|length }}/{{ quantidade_capitaes }} times</small>
+                        </div>
+                        <div class="progress-capitao">
+                            <div class="progress-capitao-fill" 
+                                 style="width: {{ (times_existentes|length / quantidade_capitaes * 100)|round }}%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Seção de Times Formados -->
+    {% if times_existentes and times_existentes|length > 0 %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2 text-primary"></i>Times Formados
+                            <span class="badge bg-primary ms-2">{{ times_existentes|length }}</span>
+                        </h5>
+                        {% if not semana.draft_em_andamento and not semana.draft_finalizado and times_existentes|length > 0 %}
+                        <button class="btn btn-sm btn-outline-danger" onclick="limparSorteioCompleto()">
+                            <i class="fas fa-trash me-1"></i>Limpar Sorteio
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for time in times_existentes %}
+                        <div class="col-md-4 col-sm-6">
+                            <div class="card h-100 border-start" style="border-left-color: {{ time.cor }} !important; border-left-width: 4px;">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h6 class="mb-0 fw-bold" style="color: {{ time.cor }};">{{ time.nome }}</h6>
+                                        {% if time.capitao and time.capitao.vezes_capitao %}
+                                        <span class="badge bg-secondary">{{ time.capitao.vezes_capitao }}x capitão</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Capitão -->
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="me-3">
+                                            <i class="fas fa-crown fa-lg" style="color: #f39c12;"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ time.capitao.nome if time.capitao else 'Sem capitão' }}</strong>
+                                            {% if time.capitao and time.capitao.apelido %}
+                                            <br>
+                                            <small class="text-muted">"{{ time.capitao.apelido }}"</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Jogadores do time -->
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-1">Jogadores no time:</small>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for escolha in time.escolhas %}
+                                            <span class="badge bg-light text-dark border">
+                                                {{ escolha.jogador.nome.split(' ')[0] }}
+                                                {% if escolha.round_num == 0 %}
+                                                <i class="fas fa-crown text-warning ms-1"></i>
+                                                {% endif %}
+                                            </span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Ações do time -->
+                                    <div class="d-flex gap-2">
+                                        {% if not semana.draft_em_andamento and not semana.draft_finalizado %}
+                                        <button class="btn btn-sm btn-outline-primary flex-fill"
+                                                onclick="trocarCapitaoTime({{ time.id }})">
+                                            <i class="fas fa-exchange-alt me-1"></i>Trocar Capitão
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="removerTime({{ time.id }})"
+                                                title="Remover time">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Lista de Jogadores com Filtros -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <h5 class="mb-2 mb-md-0">
+                            <i class="fas fa-list-ol me-2 text-primary"></i>Jogadores Confirmados
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-primary active" onclick="filtrarJogadores('todos')">
+                                    Todos
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="filtrarJogadores('elegiveis')">
+                                    Elegíveis
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="filtrarJogadores('mensalistas')">
+                                    Mensalistas
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="filtrarJogadores('cool-down')">
+                                    Em Cool-down
+                                </button>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="atualizarListaJogadores()" title="Atualizar lista">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Status Legend -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator status-ativo me-2"></span>
+                                    <small>Elegível para sorteio</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator status-inativo me-2"></span>
+                                    <small>Em cool-down (últimas 2 semanas)</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-crown text-warning me-2"></i>
+                                    <small>Capitão fixo no sistema</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                    <small>Mensalista</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Lista de Jogadores -->
+                    <div class="row g-3" id="listaJogadores">
+                        {% for jogador_info in jogadores_sorteio %}
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6 jogador-item" 
+                             data-elegivel="{{ jogador_info.elegivel|lower }}"
+                             data-mensalista="{{ jogador_info.mensalista|lower }}"
+                             data-capitao="{{ jogador_info.capitao|lower }}"
+                             data-cool-down="{{ (not jogador_info.elegivel)|lower }}">
+                            <div class="card h-100 jogador-card {% if not jogador_info.elegivel %}nao-elegivel{% endif %}">
+                                <div class="card-body">
+                                    <!-- Cabeçalho do jogador -->
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <strong>{{ jogador_info.nome }}</strong>
+                                                {% if jogador_info.apelido %}
+                                                <small class="text-muted">"{{ jogador_info.apelido }}"</small>
+                                                {% endif %}
+                                            </h6>
+                                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                                {% if jogador_info.capitao %}
+                                                <span class="capitao-badge">Capitão</span>
+                                                {% endif %}
+                                                {% if jogador_info.mensalista %}
+                                                <span class="mensalista-badge">Mensalista</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% if jogador_info.foto_perfil %}
+                                        <img src="{{ jogador_info.foto_perfil }}" 
+                                             alt="{{ jogador_info.nome }}"
+                                             class="rounded-circle" 
+                                             width="50" 
+                                             height="50"
+                                             style="object-fit: cover;">
+                                        {% else %}
+                                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                             style="width: 50px; height: 50px;">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Informações do jogador -->
+                                    <div class="mb-3">
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Posição</small>
+                                                <strong>{{ jogador_info.posicao or 'Não informada' }}</strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Nível</small>
+                                                <strong>{{ jogador_info.nivel|capitalize or 'Não informado' }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Histórico de capitão -->
+                                    {% if jogador_info.vezes_capitao %}
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-1">Histórico como Capitão</small>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-history text-muted me-2"></i>
+                                            <small>{{ jogador_info.vezes_capitao }} vezes</small>
+                                            {% if jogador_info.ultima_vez_capitao and jogador_info.ultima_vez_capitao != 'Nunca' %}
+                                            <small class="text-muted ms-2">Última: {{ jogador_info.ultima_vez_capitao }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Status e ações -->
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            {% if jogador_info.elegivel %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Elegível
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-clock me-1"></i>Cool-down
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                                    type="button" 
+                                                    data-bs-toggle="dropdown"
+                                                    aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li>
+                                                    <a class="dropdown-item" href="javascript:void(0)" 
+                                                       onclick="visualizarPerfil({{ jogador_info.id }})">
+                                                        <i class="fas fa-eye me-2"></i>Ver Perfil
+                                                    </a>
+                                                </li>
+                                                {% if not semana.draft_em_andamento and not semana.draft_finalizado %}
+                                                {% if not jogador_info.capitao %}
+                                                <li>
+                                                    <a class="dropdown-item" href="javascript:void(0)" 
+                                                       onclick="definirComoCapitao({{ jogador_info.id }}, '{{ jogador_info.nome }}')">
+                                                        <i class="fas fa-crown me-2"></i>Tornar Capitão
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                                {% if jogador_info.confirmacao and jogador_info.confirmacao.confirmado %}
+                                                <li>
+                                                    <a class="dropdown-item" href="javascript:void(0)"
+                                                       onclick="removerConfirmacao({{ jogador_info.id }})">
+                                                        <i class="fas fa-times me-2"></i>Remover Confirmação
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12">
+                            <div class="text-center py-5">
+                                <i class="fas fa-users-slash fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Nenhum jogador confirmado</h5>
+                                <p class="text-muted">A lista de presença está vazia para esta semana.</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Escolha Inicial -->
+<div class="modal fade modal-escolha" id="escolhaInicialModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-crown me-2"></i>Como escolher os capitães?
+                </h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="lead mb-4">Selecione o método para escolher os {{ quantidade_capitaes }} capitães:</p>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="btn-option" id="optionSorteio" onclick="selecionarOpcao('sorteio')">
+                            <i class="fas fa-random text-primary"></i>
+                            <h5 class="mb-2">Sorteio Automático</h5>
+                            <p class="text-muted small">
+                                Sistema escolhe automaticamente baseado na pontuação<br>
+                                <strong>Não seleciona jogadores em cool-down</strong>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="btn-option" id="optionManual" onclick="selecionarOpcao('manual')">
+                            <i class="fas fa-hand-point-up text-success"></i>
+                            <h5 class="mb-2">Escolha Manual</h5>
+                            <p class="text-muted small">
+                                Você escolhe cada capitão manualmente<br>
+                                <strong>Pode selecionar jogadores em cool-down</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info text-start" id="infoSelecionada" style="display: none;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span id="infoText"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cancelarEscolha()">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="confirmarEscolhaInicial" disabled>
+                    <i class="fas fa-check me-1"></i>Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Escolha Manual -->
+<div class="modal fade" id="escolhaManualModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-hand-point-up me-2"></i>Escolher Capitães Manualmente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="limparSelecao()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Nota:</strong> Você pode selecionar jogadores em cool-down se necessário. 
+                    <span id="infoRestantes"></span>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6>Jogadores Disponíveis:</h6>
+                        <div>
+                            <span id="contadorSelecao" class="badge bg-danger p-2 fs-6">0/{{ quantidade_capitaes }}</span>
+                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="ordenarPorPontuacao()">
+                                <i class="fas fa-sort-numeric-down"></i> Ordenar por Pontuação
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="jogadoresSelecao" class="row g-3">
+                        <div class="col-12 text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="text-muted mt-2">Carregando jogadores...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de jogadores selecionados -->
+                <div id="listaSelecionados" class="d-none">
+                    <h6 class="mb-3">Capitães Selecionados:</h6>
+                    <div id="capitaesSelecionados" class="d-flex flex-wrap gap-2 mb-3">
+                        <!-- Lista dinâmica de jogadores selecionados -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="limparSelecao()">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="confirmarEscolhaManual" disabled>
+                    <i class="fas fa-check me-1"></i>Confirmar Escolha
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Trocar Capitão -->
+<div class="modal fade" id="trocarCapitaoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-warning text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exchange-alt me-2"></i>Trocar Capitão do Time
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="trocarCapitaoConteudo">
+                    <!-- Conteúdo será carregado dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmacaoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmacaoTitulo"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmacaoMensagem"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmacaoBotao">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variáveis globais
+let jogadoresSelecionados = [];
+let listaJogadores = [];
+let metodoEscolhido = null;
+let timeParaTrocar = null;
+
+// Abrir modal de escolha inicial
+function abrirModalEscolhaInicial() {
+    const modal = new bootstrap.Modal(document.getElementById('escolhaInicialModal'));
+    modal.show();
+}
+
+// Selecionar opção (sorteio ou manual)
+function selecionarOpcao(opcao) {
+    metodoEscolhido = opcao;
+    
+    // Atualizar visual
+    document.getElementById('optionSorteio').classList.remove('active');
+    document.getElementById('optionManual').classList.remove('active');
+    document.getElementById('option' + opcao.charAt(0).toUpperCase() + opcao.slice(1)).classList.add('active');
+    
+    // Mostrar informação
+    const infoDiv = document.getElementById('infoSelecionada');
+    const infoText = document.getElementById('infoText');
+    const confirmarBtn = document.getElementById('confirmarEscolhaInicial');
+    
+    if (opcao === 'sorteio') {
+        infoText.innerHTML = `
+            <strong>Sorteio Automático selecionado:</strong><br>
+            • Sistema escolhe os melhores jogadores baseado na pontuação<br>
+            • Jogadores em cool-down NÃO serão selecionados<br>
+            • Prioriza mensalistas e jogadores com menos vezes como capitão
+        `;
+    } else {
+        infoText.innerHTML = `
+            <strong>Escolha Manual selecionada:</strong><br>
+            • Você escolhe cada capitão individualmente<br>
+            • Pode selecionar jogadores em cool-down se necessário<br>
+            • Ideal quando precisa de controle total sobre a escolha
+        `;
+    }
+    
+    infoDiv.style.display = 'block';
+    confirmarBtn.disabled = false;
+}
+
+// Cancelar escolha inicial
+function cancelarEscolha() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('escolhaInicialModal'));
+    modal.hide();
+    metodoEscolhido = null;
+}
+
+// Continuar após escolher método
+document.getElementById('confirmarEscolhaInicial').onclick = function() {
+    if (!metodoEscolhido) return;
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('escolhaInicialModal'));
+    modal.hide();
+    
+    if (metodoEscolhido === 'sorteio') {
+        realizarSorteio();
+    } else {
+        abrirModalEscolhaManualCompleta();
+    }
+};
+
+// Abrir modal de escolha manual completa
+function abrirModalEscolhaManualCompleta() {
+    fetch(`/api/capitao/prioridade/{{ semana.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                listaJogadores = data.jogadores;
+                atualizarListaSelecao();
+                
+                const modal = new bootstrap.Modal(document.getElementById('escolhaManualModal'));
+                modal.show();
+            } else {
+                mostrarMensagem('error', 'Erro', 'Erro ao carregar jogadores');
+            }
+        })
+        .catch(error => {
+            mostrarMensagem('error', 'Erro', 'Erro ao carregar jogadores: ' + error.message);
+        });
+}
+
+// Função para realizar sorteio aleatório (NÃO seleciona jogadores em cool-down)
+function realizarSorteio() {
+    mostrarConfirmacao(
+        'Realizar Sorteio Automático',
+        `Deseja realizar sorteio automático? O sistema escolherá os {{ quantidade_capitaes }} melhores jogadores baseado na pontuação, ignorando jogadores em cool-down.`,
+        () => {
+            fetch(`/admin/sorteio_capitaes/realizar/{{ semana.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensagem('success', 'Sorteio realizado!', data.message);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    mostrarMensagem('error', 'Erro', data.message);
+                }
+            })
+            .catch(error => {
+                mostrarMensagem('error', 'Erro', 'Erro ao realizar sorteio: ' + error.message);
+            });
+        }
+    );
+}
+
+// Atualizar lista de seleção (para escolha manual)
+function atualizarListaSelecao() {
+    const jogadoresDiv = document.getElementById('jogadoresSelecao');
+    let html = '';
+    
+    if (listaJogadores.length === 0) {
+        html = `
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-users-slash fa-2x text-muted mb-3"></i>
+                <p class="text-muted">Nenhum jogador confirmado</p>
+            </div>
+        `;
+    } else {
+        listaJogadores.forEach(jogador => {
+            const selecionado = jogadoresSelecionados.includes(jogador.id);
+            const vezes_capitao = jogador.vezes_capitao || 0;
+            const elegivel = jogador.elegivel;
+            const coolDown = !elegivel;
+            
+            html += `
+                <div class="col-xl-4 col-lg-6">
+                    <div class="card h-100 jogador-card-selecao ${selecionado ? 'selecionado' : ''} ${coolDown ? 'nao-elegivel' : ''}" 
+                         onclick="selecionarJogadorSelecao(${jogador.id}, this)">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">${jogador.nome}</h6>
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        ${jogador.mensalista ? '<span class="badge bg-success">Mensalista</span>' : ''}
+                                        ${jogador.capitao ? '<span class="badge bg-warning">Capitão</span>' : ''}
+                                    </div>
+                                </div>
+                                ${jogador.foto_perfil ? 
+                                    `<img src="${jogador.foto_perfil}" class="rounded-circle" width="40" height="40" style="object-fit: cover;">` :
+                                    `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>`
+                                }
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">${jogador.posicao || 'Sem posição'} • ${jogador.nivel || 'Sem nível'}</small>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-history me-1"></i>${vezes_capitao}x capitão
+                                </small>
+                                ${coolDown ? 
+                                    '<span class="badge bg-danger">Cool-down</span>' : 
+                                    '<span class="badge bg-success">Elegível</span>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    jogadoresDiv.innerHTML = html;
+    atualizarContadorSelecao();
+}
+
+// Selecionar jogador na modal (escolha manual - PODE selecionar cool-down)
+function selecionarJogadorSelecao(jogadorId, element) {
+    const index = jogadoresSelecionados.indexOf(jogadorId);
+    
+    if (index === -1) {
+        if (jogadoresSelecionados.length >= {{ quantidade_capitaes }}) {
+            mostrarMensagem('warning', 'Atenção', `Máximo de {{ quantidade_capitaes }} jogadores permitido`);
+            return;
+        }
+        jogadoresSelecionados.push(jogadorId);
+        element.classList.add('selecionado');
+    } else {
+        jogadoresSelecionados.splice(index, 1);
+        element.classList.remove('selecionado');
+    }
+    
+    atualizarContadorSelecao();
+}
+
+// Atualizar contador de seleção
+function atualizarContadorSelecao() {
+    const contador = document.getElementById('contadorSelecao');
+    const confirmarBtn = document.getElementById('confirmarEscolhaManual');
+    const listaSelecionadosDiv = document.getElementById('listaSelecionados');
+    const capitaesSelecionadosDiv = document.getElementById('capitaesSelecionados');
+    const infoRestantes = document.getElementById('infoRestantes');
+    
+    // Atualizar contador
+    const restantes = {{ quantidade_capitaes }} - jogadoresSelecionados.length;
+    contador.textContent = `${jogadoresSelecionados.length}/{{ quantidade_capitaes }}`;
+    infoRestantes.textContent = `(${restantes} restante${restantes !== 1 ? 's' : ''})`;
+    
+    if (jogadoresSelecionados.length === {{ quantidade_capitaes }}) {
+        contador.className = 'badge bg-success p-2 fs-6';
+        confirmarBtn.disabled = false;
+    } else {
+        contador.className = 'badge bg-danger p-2 fs-6';
+        confirmarBtn.disabled = true;
+    }
+    
+    // Atualizar lista de selecionados
+    if (jogadoresSelecionados.length > 0) {
+        listaSelecionadosDiv.classList.remove('d-none');
+        
+        let html = '';
+        jogadoresSelecionados.forEach(id => {
+            const jogador = listaJogadores.find(j => j.id === id);
+            if (jogador) {
+                html += `
+                    <span class="badge bg-primary p-2 d-flex align-items-center">
+                        ${jogador.nome}
+                        <button type="button" class="btn-close btn-close-white ms-2" 
+                                onclick="removerSelecionado(${id})" 
+                                style="font-size: 0.6rem;"></button>
+                    </span>
+                `;
+            }
+        });
+        
+        capitaesSelecionadosDiv.innerHTML = html;
+    } else {
+        listaSelecionadosDiv.classList.add('d-none');
+    }
+}
+
+// Remover jogador da lista de selecionados
+function removerSelecionado(jogadorId) {
+    const index = jogadoresSelecionados.indexOf(jogadorId);
+    if (index > -1) {
+        jogadoresSelecionados.splice(index, 1);
+        // Atualizar visualmente os cards
+        document.querySelectorAll('.jogador-card-selecao').forEach(card => {
+            const cardId = card.querySelector('.card-body')?.getAttribute('data-id');
+            if (cardId && parseInt(cardId) === jogadorId) {
+                card.classList.remove('selecionado');
+            }
+        });
+        atualizarContadorSelecao();
+    }
+}
+
+// Limpar seleção
+function limparSelecao() {
+    jogadoresSelecionados = [];
+    const modal = bootstrap.Modal.getInstance(document.getElementById('escolhaManualModal'));
+    if (modal) modal.hide();
+}
+
+// Ordenar por pontuação
+function ordenarPorPontuacao() {
+    listaJogadores.sort((a, b) => b.pontuacao - a.pontuacao);
+    atualizarListaSelecao();
+}
+
+// Configurar botão de confirmação da escolha manual
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmarBtn = document.getElementById('confirmarEscolhaManual');
+    if (confirmarBtn) {
+        confirmarBtn.onclick = function() {
+            if (jogadoresSelecionados.length !== {{ quantidade_capitaes }}) {
+                mostrarMensagem('warning', 'Atenção', `Selecione exatamente {{ quantidade_capitaes }} jogadores`);
+                return;
+            }
+            
+            // Verificar se há jogadores em cool-down selecionados
+            const jogadoresCoolDown = listaJogadores.filter(j => 
+                jogadoresSelecionados.includes(j.id) && !j.elegivel
+            );
+            
+            let mensagem = `Deseja definir ${jogadoresSelecionados.length} jogadores como capitães?`;
+            if (jogadoresCoolDown.length > 0) {
+                mensagem += `\n\n⚠️ Atenção: ${jogadoresCoolDown.length} jogador(es) está(ão) em cool-down:\n`;
+                jogadoresCoolDown.forEach(j => {
+                    mensagem += `• ${j.nome}\n`;
+                });
+                mensagem += "\nDeseja continuar mesmo assim?";
+            }
+            
+            mostrarConfirmacao(
+                'Confirmar Escolha Manual',
+                mensagem,
+                () => {
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
+                    this.disabled = true;
+                    
+                    fetch(`/admin/sorteio_capitaes/{{ semana.id }}/definir_manual`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ capitaes_ids: jogadoresSelecionados })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            mostrarMensagem('success', 'Sucesso!', data.message);
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            mostrarMensagem('error', 'Erro', data.message);
+                            this.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Escolha';
+                            this.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        mostrarMensagem('error', 'Erro', 'Erro ao salvar: ' + error.message);
+                        this.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Escolha';
+                        this.disabled = false;
+                    });
+                }
+            );
+        };
+    }
+});
+
+// Atualize a função iniciarDraftDireto
+function iniciarDraftDireto() {
+    const numTimes = {{ times_existentes|length }};
+    const jogadoresPorTime = {{ semana.max_jogadores_por_time or 6 }};
+    const tempoPorEscolha = {{ semana.tempo_escolha or 30 }};
+    const modoDraft = '{{ semana.modo_draft or "linear" }}';
+    const totalJogadoresNeeded = numTimes * jogadoresPorTime;
+    
+    mostrarConfirmacao(
+        'Iniciar Draft',
+        `Deseja iniciar o draft com as configurações atuais?\n\n` +
+        `• Times: ${numTimes} formados\n` +
+        `• Modo: ${modoDraft === 'snake' ? 'Snake Draft' : 'Draft Linear'}\n` +
+        `• Tempo: ${tempoPorEscolha === 0 ? 'Sem limite' : tempoPorEscolha + ' segundos'}\n` +
+        `• Jogadores por time: ${jogadoresPorTime}\n` +
+        `• Total necessário: ${totalJogadoresNeeded} jogadores\n\n` +
+        `Os capitães já formados serão mantidos.`,
+        () => {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Iniciando...';
+            button.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('semana_id', {{ semana.id }});
+            formData.append('modo_draft', modoDraft);
+            formData.append('tempo_por_escolha', tempoPorEscolha);
+            formData.append('max_times', numTimes);
+            formData.append('max_jogadores_por_time', jogadoresPorTime);
+            
+            fetch('{{ url_for("iniciar_draft") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensagem('success', 'Draft Iniciado!', data.message);
+                    if (data.redirect_url) {
+                        setTimeout(() => {
+                            window.location.href = data.redirect_url;
+                        }, 1500);
+                    } else {
+                        setTimeout(() => {
+                            window.location.href = '{{ url_for("admin_dashboard", semana_id=semana.id) }}';
+                        }, 1500);
+                    }
+                } else {
+                    mostrarMensagem('error', 'Erro', data.message);
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                mostrarMensagem('error', 'Erro', 'Erro ao iniciar draft: ' + error.message);
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+    );
+}
+
+// Função para trocar capitão de um time
+function trocarCapitaoTime(timeId) {
+    timeParaTrocar = timeId;
+    
+    // Carregar jogadores disponíveis para troca
+    fetch(`/api/sorteio_capitaes/{{ semana.id }}/jogadores_disponiveis`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let html = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Selecione um novo capitão para este time. 
+                        <strong>Pode selecionar jogadores em cool-down se necessário.</strong>
+                    </div>
+                    
+                    <div class="row g-3" id="jogadoresTroca">
+                `;
+                
+                if (data.jogadores.length === 0) {
+                    html += `
+                        <div class="col-12 text-center py-4">
+                            <i class="fas fa-users-slash fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">Nenhum jogador disponível</p>
+                        </div>
+                    `;
+                } else {
+                    data.jogadores.forEach(jogador => {
+                        const coolDown = !jogador.elegivel;
+                        html += `
+                            <div class="col-md-6 col-sm-6">
+                                <div class="card h-100 jogador-card-selecao ${coolDown ? 'nao-elegivel' : ''}" 
+                                     onclick="selecionarParaTroca(${jogador.id}, '${jogador.nome}')">
+                                    <div class="card-body">
+                                        <h6 class="mb-2">${jogador.nome}</h6>
+                                        <div class="d-flex flex-wrap gap-1 mb-2">
+                                            ${jogador.mensalista ? '<span class="badge bg-success">Mensalista</span>' : ''}
+                                            ${jogador.capitao ? '<span class="badge bg-warning">Capitão</span>' : ''}
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">${jogador.posicao || 'Sem posição'}</small>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                ${jogador.vezes_capitao || 0}x capitão
+                                            </small>
+                                            ${coolDown ? 
+                                                '<span class="badge bg-danger">Cool-down</span>' : 
+                                                '<span class="badge bg-success">Disponível</span>'
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                html += `</div>`;
+                document.getElementById('trocarCapitaoConteudo').innerHTML = html;
+                
+                const modal = new bootstrap.Modal(document.getElementById('trocarCapitaoModal'));
+                modal.show();
+            } else {
+                mostrarMensagem('error', 'Erro', data.message);
+            }
+        })
+        .catch(error => {
+            mostrarMensagem('error', 'Erro', 'Erro ao carregar jogadores: ' + error.message);
+        });
+}
+
+// Selecionar jogador para troca
+function selecionarParaTroca(jogadorId, jogadorNome) {
+    mostrarConfirmacao(
+        'Confirmar Troca',
+        `Deseja definir ${jogadorNome} como novo capitão deste time?`,
+        () => {
+            fetch(`/api/draft/trocar_capitao`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    semana_id: {{ semana.id }},
+                    time_id: timeParaTrocar,
+                    novo_capitao_id: jogadorId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensagem('success', 'Capitão Trocado!', data.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    mostrarMensagem('error', 'Erro', data.message);
+                }
+            })
+            .catch(error => {
+                mostrarMensagem('error', 'Erro', 'Erro ao trocar capitão: ' + error.message);
+            });
+        }
+    );
+}
+
+// Funções de filtro
+function filtrarJogadores(tipo) {
+    const jogadorItems = document.querySelectorAll('.jogador-item');
+    const botoes = document.querySelectorAll('.btn-group .btn');
+    
+    // Atualizar botões ativos
+    botoes.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent.trim().toLowerCase() === tipo) {
+            btn.classList.add('active');
+        }
+    });
+    
+    jogadorItems.forEach(item => {
+        switch(tipo) {
+            case 'elegiveis':
+                item.style.display = item.dataset.elegivel === 'true' ? 'block' : 'none';
+                break;
+            case 'mensalistas':
+                item.style.display = item.dataset.mensalista === 'true' ? 'block' : 'none';
+                break;
+            case 'cool-down':
+                item.style.display = item.dataset.coolDown === 'true' ? 'block' : 'none';
+                break;
+            default:
+                item.style.display = 'block';
+        }
+    });
+}
+
+// Limpar sorteio completo
+function limparSorteioCompleto() {
+    mostrarConfirmacao(
+        'Limpar Sorteio',
+        'Deseja limpar completamente o sorteio? Todos os times e capitães serão removidos.',
+        () => {
+            fetch(`/admin/sorteio_capitaes/{{ semana.id }}/limpar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensagem('success', 'Sorteio Limpo!', data.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    mostrarMensagem('error', 'Erro', data.message);
+                }
+            })
+            .catch(error => {
+                mostrarMensagem('error', 'Erro', 'Erro ao limpar sorteio: ' + error.message);
+            });
+        }
+    );
+}
+
+// Remover time específico
+function removerTime(timeId) {
+    mostrarConfirmacao(
+        'Remover Time',
+        'Deseja remover este time?',
+        () => {
+            fetch(`/admin/sorteio_capitaes/{{ semana.id }}/remover_time/${timeId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensagem('success', 'Time removido!', data.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    mostrarMensagem('error', 'Erro', data.message);
+                }
+            })
+            .catch(error => {
+                mostrarMensagem('error', 'Erro', 'Erro ao remover time: ' + error.message);
+            });
+        }
+    );
+}
+
+// Sincronizar capitães
+function verificarInconsistencias() {
+    fetch(`/admin/verificar_inconsistencias/{{ semana.id }}`)
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            mostrarMensagem('error', 'Erro', 'Erro ao verificar inconsistências');
+        });
+}
+
+// Funções utilitárias
+function mostrarConfirmacao(titulo, mensagem, callback) {
+    document.getElementById('confirmacaoTitulo').textContent = titulo;
+    document.getElementById('confirmacaoMensagem').textContent = mensagem;
+    document.getElementById('confirmacaoBotao').onclick = function() {
+        callback();
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmacaoModal'));
+        if (modal) modal.hide();
+    };
+    
+    new bootstrap.Modal(document.getElementById('confirmacaoModal')).show();
+}
+
+function mostrarMensagem(tipo, titulo, mensagem) {
+    // Criar um toast
+    const toastContainer = document.createElement('div');
+    toastContainer.className = 'position-fixed top-0 end-0 p-3';
+    toastContainer.style.zIndex = '1100';
+    
+    const alertClass = tipo === 'success' ? 'bg-success' : 
+                      tipo === 'error' ? 'bg-danger' : 
+                      tipo === 'warning' ? 'bg-warning' : 'bg-info';
+    
+    toastContainer.innerHTML = `
+        <div class="toast align-items-center text-white ${alertClass} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${titulo}:</strong> ${mensagem}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(toastContainer);
+    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
+    toast.show();
+    
+    // Remover depois de 5 segundos
+    setTimeout(() => {
+        toastContainer.remove();
+    }, 5000);
+}
+
+// Funções adicionais
+function visualizarPerfil(jogadorId) {
+    window.open(`/admin/jogador/${jogadorId}`, '_blank');
+}
+
+function definirComoCapitao(jogadorId, nome) {
+    mostrarConfirmacao(
+        'Definir como Capitão',
+        `Deseja definir ${nome} como capitão fixo?`,
+        () => {
+            fetch(`/admin/cadastrar_capitao/${jogadorId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensagem('success', 'Sucesso!', data.message);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    mostrarMensagem('error', 'Erro', data.message);
+                }
+            });
+        }
+    );
+}
+
+function atualizarListaJogadores() {
+    location.reload();
+}
+
+// Abrir modal de escolha manual (para adicionar mais capitães)
+function abrirModalEscolhaManual() {
+    fetch(`/api/capitao/prioridade/{{ semana.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                listaJogadores = data.jogadores;
+                // Remover jogadores que já são capitães em times existentes
+                const capitaesExistentes = [];
+                {% for time in times_existentes %}
+                    {% if time.capitao %}
+                        capitaesExistentes.push({{ time.capitao.id }});
+                    {% endif %}
+                {% endfor %}
+                
+                listaJogadores = listaJogadores.filter(j => !capitaesExistentes.includes(j.id));
+                
+                if (listaJogadores.length === 0) {
+                    mostrarMensagem('warning', 'Atenção', 'Todos os jogadores já são capitães ou não estão disponíveis');
+                    return;
+                }
+                
+                jogadoresSelecionados = [];
+                atualizarListaSelecao();
+                
+                const modal = new bootstrap.Modal(document.getElementById('escolhaManualModal'));
+                modal.show();
+            } else {
+                mostrarMensagem('error', 'Erro', 'Erro ao carregar jogadores');
+            }
+        })
+        .catch(error => {
+            mostrarMensagem('error', 'Erro', 'Erro ao carregar jogadores: ' + error.message);
+        });
+}
+
+// Remover confirmação (placeholder)
+function removerConfirmacao(jogadorId) {
+    mostrarMensagem('info', 'Em desenvolvimento', 'Funcionalidade em desenvolvimento');
+}
+</script>
+{% endblock %}

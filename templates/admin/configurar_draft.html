@@ -1,0 +1,319 @@
+<!-- templates/admin/configurar_draft.html -->
+{% extends "admin/base.html" %}
+
+{% block admin_title %}Configurar Draft{% endblock %}
+
+{% block admin_content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Configurar Draft
+                    <small class="float-end">{{ format_date(semana.data) }}</small>
+                </h4>
+            </div>
+            
+            <div class="card-body">
+                <!-- Times Formados -->
+                <div class="alert alert-info mb-4">
+                    <h5><i class="fas fa-users me-2"></i>Times Formados</h5>
+                    <div class="row mt-3">
+                        {% for time in times_existentes %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-start" style="border-left-color: {{ time.cor }} !important; border-left-width: 4px;">
+                                <div class="card-body">
+                                    <h6 class="mb-2" style="color: {{ time.cor }};">{{ time.nome }}</h6>
+                                    <p class="mb-1">
+                                        <i class="fas fa-crown me-2 text-warning"></i>
+                                        {% if time.capitao %}
+                                        {{ time.capitao.nome }}
+                                        {% else %}
+                                        Sem capitão
+                                        {% endif %}
+                                    </p>
+                                    <small class="text-muted">
+                                        Ordem: {{ time.ordem_escolha }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Formulário de Configuração -->
+                <form method="POST" action="{{ url_for('configurar_draft', semana_id=semana.id) }}">
+                    <!-- Modo do Draft -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="fas fa-random me-2"></i>Modo do Draft</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="modo_draft" 
+                                           id="modo_linear" value="linear" checked>
+                                    <label class="form-check-label" for="modo_linear">
+                                        <strong>Draft Linear (Padrão)</strong><br>
+                                        <small class="text-muted">
+                                            Cada time escolhe na mesma ordem em todas as rodadas.<br>
+                                            Ordem: Time 1, Time 2, Time 3, Time 1, Time 2...
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="modo_draft" 
+                                           id="modo_snake" value="snake">
+                                    <label class="form-check-label" for="modo_snake">
+                                        <strong>Snake Draft</strong><br>
+                                        <small class="text-muted">
+                                            A ordem inverte a cada rodada.<br>
+                                            Rodada 1: Time 1, Time 2, Time 3<br>
+                                            Rodada 2: Time 3, Time 2, Time 1
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tempo por Escolha -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="fas fa-clock me-2"></i>Tempo por Escolha</h5>
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <input type="number" class="form-control" 
+                                           id="tempo_por_escolha" name="tempo_por_escolha"
+                                           value="{{ semana.tempo_escolha or 30 }}" 
+                                           min="0" max="300" step="5">
+                                    <span class="input-group-text">segundos</span>
+                                </div>
+                                <div class="form-text">
+                                    <ul class="mb-0 mt-2">
+                                        <li><strong>0 segundos:</strong> Sem limite de tempo (recomendado)</li>
+                                        <li><strong>15-30 segundos:</strong> Draft ágil e dinâmico</li>
+                                        <li><strong>45-60 segundos:</strong> Mais tempo para pensar</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tempo_por_escolha').value=0">
+                                        Sem Tempo
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tempo_por_escolha').value=30">
+                                        30s Padrão
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tempo_por_escolha').value=60">
+                                        60s Extendido
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Jogadores por Time -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="fas fa-user-friends me-2"></i>Jogadores por Time</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="number" class="form-control" 
+                                           id="max_jogadores_por_time" name="max_jogadores_por_time"
+                                           value="{{ semana.max_jogadores_por_time or 6 }}" 
+                                           min="1" max="12" step="1">
+                                    <span class="input-group-text">jogadores</span>
+                                </div>
+                                <div class="form-text mt-2">
+                                    Total necessário: 
+                                    <span id="total_jogadores_needed">{{ times_existentes|length * (semana.max_jogadores_por_time or 6) }}</span>
+                                    jogadores confirmados
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('max_jogadores_por_time').value=6">
+                                        6 Jogadores
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('max_jogadores_por_time').value=8">
+                                        8 Jogadores
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('max_jogadores_por_time').value=10">
+                                        10 Jogadores
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Resumo da Configuração -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Resumo da Configuração</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 text-center">
+                                    <div class="mb-3">
+                                        <div class="display-6 fw-bold text-primary" id="resumo_times">{{ times_existentes|length }}</div>
+                                        <small class="text-muted">Times</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="mb-3">
+                                        <div class="display-6 fw-bold text-success" id="resumo_jogadores_por_time">{{ semana.max_jogadores_por_time or 6 }}</div>
+                                        <small class="text-muted">Jogadores por time</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="mb-3">
+                                        <div class="display-6 fw-bold text-warning" id="resumo_tempo">{{ semana.tempo_escolha or 30 }}</div>
+                                        <small class="text-muted">Segundos por escolha</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning mt-3" id="alerta_configuracao" style="display: none;">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <span id="alerta_texto"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões de Ação -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_sorteio_capitaes', semana_id=semana.id) }}" 
+                           class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i>Voltar ao Sorteio
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>Salvar Configuração
+                        </button>
+                        <a href="{{ url_for('iniciar_draft') }}?semana_id={{ semana.id }}" 
+                           class="btn btn-primary" onclick="return confirmIniciarDraft()">
+                            <i class="fas fa-play me-1"></i>Iniciar Draft Agora
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Atualizar resumo dinamicamente
+    function atualizarResumo() {
+        const tempo = parseInt($('#tempo_por_escolha').val()) || 0;
+        const jogadoresPorTime = parseInt($('#max_jogadores_por_time').val()) || 6;
+        const numTimes = {{ times_existentes|length }};
+        
+        $('#resumo_tempo').text(tempo);
+        $('#resumo_jogadores_por_time').text(jogadoresPorTime);
+        $('#total_jogadores_needed').text(numTimes * jogadoresPorTime);
+        
+        // Verificar alertas
+        const alertaDiv = $('#alerta_configuracao');
+        const alertaTexto = $('#alerta_texto');
+        
+        if (tempo === 0) {
+            alertaDiv.show().removeClass('alert-warning').addClass('alert-info');
+            alertaTexto.html('<strong>Draft sem limite de tempo:</strong> Os capitães terão tempo ilimitado para fazer suas escolhas.');
+        } else if (tempo < 15) {
+            alertaDiv.show().removeClass('alert-info').addClass('alert-warning');
+            alertaTexto.html(`<strong>Tempo muito curto (${tempo}s):</strong> Pode tornar o draft muito apressado.`);
+        } else if (tempo > 60) {
+            alertaDiv.show().removeClass('alert-info').addClass('alert-warning');
+            alertaTexto.html(`<strong>Tempo muito longo (${tempo}s):</strong> O draft pode ficar lento.`);
+        } else {
+            alertaDiv.hide();
+        }
+    }
+    
+    // Event listeners
+    $('#tempo_por_escolha, #max_jogadores_por_time').on('input change', atualizarResumo);
+    
+    // Inicializar
+    atualizarResumo();
+    
+    // Verificar modo do draft atual
+    {% if semana.modo_draft == 'snake' %}
+    $('#modo_snake').prop('checked', true);
+    {% else %}
+    $('#modo_linear').prop('checked', true);
+    {% endif %}
+});
+
+function confirmIniciarDraft() {
+    const tempo = parseInt($('#tempo_por_escolha').val()) || 0;
+    const jogadoresPorTime = parseInt($('#max_jogadores_por_time').val()) || 6;
+    const modoDraft = $('input[name="modo_draft"]:checked').val();
+    const numTimes = {{ times_existentes|length }};
+    
+    const totalJogadoresNeeded = numTimes * jogadoresPorTime;
+    
+    let mensagem = `
+        <div class="text-start">
+            <p><strong>Deseja iniciar o draft com as seguintes configurações?</strong></p>
+            <ul>
+                <li><strong>Times:</strong> ${numTimes} formados</li>
+                <li><strong>Modo:</strong> ${modoDraft === 'snake' ? 'Snake Draft' : 'Draft Linear'}</li>
+                <li><strong>Tempo por escolha:</strong> ${tempo === 0 ? 'Sem limite' : tempo + ' segundos'}</li>
+                <li><strong>Jogadores por time:</strong> ${jogadoresPorTime}</li>
+                <li><strong>Total necessário:</strong> ${totalJogadoresNeeded} jogadores confirmados</li>
+            </ul>
+    `;
+    
+    if (tempo > 0) {
+        mensagem += `<div class="alert alert-info">
+            <i class="fas fa-clock me-2"></i>
+            <strong>Timer ativado:</strong> Cada capitão terá ${tempo} segundos para fazer sua escolha.
+        </div>`;
+    }
+    
+    mensagem += `</div>`;
+    
+    return Swal.fire({
+        title: 'Iniciar Draft',
+        html: mensagem,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, iniciar draft',
+        cancelButtonText: 'Ainda não',
+        confirmButtonColor: '#0d6efd',
+        width: 600
+    }).then((result) => {
+        return result.isConfirmed;
+    });
+}
+</script>
+
+<style>
+.form-check-label {
+    cursor: pointer;
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.form-check-input:checked + .form-check-label {
+    border-color: #0d6efd;
+    background-color: #f8f9fa;
+}
+
+.form-check-input {
+    margin-top: 0.5rem;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+}
+</style>
+{% endblock %}

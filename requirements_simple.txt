@@ -2,3 +2,69 @@ Flask>=2.3.0
 Flask-SQLAlchemy>=3.0.0
 Flask-Login>=0.6.0
 Flask-SocketIO>=5.0.0
+
+
+services:
+  app:
+    build: .
+    container_name: volei-draft-app
+    restart: unless-stopped
+
+    ports:
+      - "3000:8000"
+
+    volumes:
+      - .:/app
+
+    environment:
+      SECRET_KEY: "77ec4e30e37f8a3a80177ee1e6054c13c3925ca1857595bf3516cf27b466bdec9be862c6642336b0abc66b252f91a4aa7968700f3aae34068470ba046428980d"
+      FLASK_ENV: production
+
+
+services:
+  app:
+    build: .
+    container_name: volei-draft-app
+    restart: unless-stopped
+
+    ports:
+      - "3000:5000"
+
+    volumes:
+      - .:/app
+
+    environment:
+      SECRET_KEY: "77ec4e30e37f8a3a80177ee1e6054c13c3925ca1857595bf3516cf27b466bdec9be862c6642336b0abc66b252f91a4aa7968700f3aae34068470ba046428980d"
+      SECRET_KEY: ""
+      FLASK_ENV: production
+
+    command: >
+      gunicorn
+      -k gevent
+      -w 1
+      -b 0.0.0.0:5000
+      app:app
+
+
+services:
+  app:
+    build: .
+    container_name: volei-draft-app
+    restart: unless-stopped
+
+    ports:
+      - "3000:5000"
+
+    volumes:
+      - .:/app
+
+    environment:
+      SECRET_KEY: "77ec4e30e37f8a3a80177ee1e6054c13c3925ca1857595bf3516cf27b466bdec9be862c6642336b0abc66b252f91a4aa7968700f3aae34068470ba04642898"
+      FLASK_ENV: production
+
+    command: >
+      gunicorn
+      -k gevent
+      -w 1
+      -b 0.0.0.0:5000
+      app:app
