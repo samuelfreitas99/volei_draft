@@ -1117,80 +1117,37 @@
         
         $(document).ready(function() {
             // Validação do modal de reinício - VERSÃO CORRIGIDA
-            $('#confirmText').on('input', function() {
-                const inputValue = $(this).val().trim().toUpperCase();
-                const confirmBtn = $('#confirmReinicioBtn');
-                const messageDiv = $('#confirmMessage');
-                
-                // Limpa mensagens anteriores
-                messageDiv.hide().removeClass().text('');
-                
-                if (inputValue === 'REINICIAR') {
-                    // Texto correto - habilita botão
-                    confirmBtn.prop('disabled', false);
-                    messageDiv.addClass('alert alert-success')
-                            .html('<i class="fas fa-check-circle me-2"></i>Texto correto! Botão habilitado.')
-                            .show();
-                } else if (inputValue.length > 0) {
-                    // Texto incorreto - mantém botão desabilitado
-                    confirmBtn.prop('disabled', true);
-                    messageDiv.addClass('alert alert-warning')
-                            .html('<i class="fas fa-exclamation-triangle me-2"></i>Digite exatamente: <strong>REINICIAR</strong>')
-                            .show();
-                } else {
-                    // Campo vazio - desabilita botão
-                    confirmBtn.prop('disabled', true);
-                }
+            const reinicioBtn = $('#confirmReinicioBtn');
+            const reiniciarModal = $('#reiniciarModal');
+
+            reiniciarModal.on('show.bs.modal', function() {
+                reinicioBtn
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-redo me-2"></i> Sim, Reiniciar Agora');
             });
-            
-            // Forçar validação inicial
-            $('#confirmText').trigger('input');
-            
-            // Adicionar verificação ao pressionar Enter
-            $('#confirmText').on('keypress', function(e) {
-                if (e.which === 13) { // Enter key
-                    const inputValue = $(this).val().trim().toUpperCase();
-                    if (inputValue === 'REINICIAR' && !$('#confirmReinicioBtn').prop('disabled')) {
-                        e.preventDefault();
-                        $('#confirmReinicioBtn').click();
-                    }
-                }
-            });
-            
-            $('#confirmReinicioBtn').click(function() {
+
+            reinicioBtn.on('click', function() {
                 const btn = $(this);
-                const originalText = btn.html();
-                
+                const reiniciarUrl = btn.data('reiniciar-url');
+
+                if (!reiniciarUrl) {
+                    showToast('URL de reinício não encontrada.', 'danger');
+                    return;
+                }
+
                 btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Reiniciando...');
                 btn.prop('disabled', true);
-                
-                // Fecha o modal
-                $('#reiniciarModal').modal('hide');
-                
-                // Redireciona para reiniciar semana
+
                 setTimeout(() => {
-                    window.location.href = '{{ url_for("reiniciar_semana", semana_id=semana.id) }}';
-                }, 1000);
+                    window.location.href = reiniciarUrl;
+                }, 500);
             });
-            
-            // Limpar campo quando modal for fechado
-            $('#reiniciarModal').on('hidden.bs.modal', function() {
-                $('#confirmText').val('');
-                $('#confirmMessage').hide().removeClass().text('');
-                $('#confirmReinicioBtn').prop('disabled', true);
+
+            $('#configDraftForm').on('submit', function() {
+                const iniciarBtn = $('#iniciarDraftBtn');
+                iniciarBtn.html('<span class="spinner-border spinner-border-sm me-2"></span>Iniciando...');
+                iniciarBtn.prop('disabled', true);
             });
-        });
-        
-        $('#confirmReinicioBtn').click(function() {
-            const btn = $(this);
-            const originalText = btn.html();
-            
-            btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Reiniciando...');
-            btn.prop('disabled', true);
-            
-            setTimeout(() => {
-                window.location.href = '{{ url_for("reiniciar_semana", semana_id=semana.id) }}';
-            }, 1000);
         });
         
         // Função para confirmar mensalista
@@ -1294,51 +1251,11 @@
         });
     });
 
-    function prepararReinicio(semanaId) {
-    // Armazena o ID da semana para usar no botão de confirmação
-    sessionStorage.setItem('semanaParaReiniciar', semanaId);
-}
     document.addEventListener('DOMContentLoaded', function() {
-        const reinicioLink = document.querySelector('a[href*="reiniciar_semana"]');
-        
-        if (reinicioLink) {
-            reinicioLink.addEventListener('click', function(e) {
-                // Mostrar loading no botão
-                const originalHTML = this.innerHTML;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Reiniciando...';
-                this.classList.add('disabled');
-                
-                // Opcional: mostrar mensagem de sucesso após alguns segundos
-                setTimeout(() => {
-                    if (this.innerHTML.includes('Reiniciando')) {
-                        this.innerHTML = '<i class="fas fa-check me-2"></i> Reiniciado!';
-                    }
-                }, 1500);
-            });
-        }
-        
-        // Feedback quando modal é aberto
         const modalElement = document.getElementById('reiniciarModal');
         if (modalElement) {
             modalElement.addEventListener('show.bs.modal', function() {
                 console.log('Modal de reinício aberto para a semana {{ semana.id }}');
-            });
-        }
-    });
-    // Configurar botão de confirmação
-    document.addEventListener('DOMContentLoaded', function() {
-        const confirmBtn = document.getElementById('confirmReinicioBtn');
-        
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', function() {
-                const semanaId = sessionStorage.getItem('semanaParaReiniciar');
-                
-                if (semanaId) {
-                    // Redireciona para a rota de reinício
-                    window.location.href = `/admin/reiniciar_semana?semana_id=${semanaId}`;
-                } else {
-                    alert('Erro: ID da semana não encontrado.');
-                }
             });
         }
     });
