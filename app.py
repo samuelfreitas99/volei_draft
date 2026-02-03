@@ -627,8 +627,8 @@ def limpar_semanas_fora_ciclo():
             # Remove dados relacionados
             Confirmacao.query.filter_by(semana_id=semana.id).delete()
             ListaEspera.query.filter_by(semana_id=semana.id).delete()
-            Time.query.filter_by(semana_id=semana.id).delete()
             EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
+            Time.query.filter_by(semana_id=semana.id).delete()
             DraftStatus.query.filter_by(semana_id=semana.id).delete()
             HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
             
@@ -974,8 +974,8 @@ def inicializar_draft(semana, tempo_por_escolha=None, modo_draft=None, max_times
     else:
         # CÓDIGO ORIGINAL PARA QUANDO NÃO HÁ TIMES (cria do zero)
         # Remove dados anteriores do draft
-        Time.query.filter_by(semana_id=semana.id).delete()
         EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
+        Time.query.filter_by(semana_id=semana.id).delete()
         DraftStatus.query.filter_by(semana_id=semana.id).delete()
         HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
         
@@ -1428,8 +1428,8 @@ def excluir_semana(id):
         # Remove dados relacionados
         Confirmacao.query.filter_by(semana_id=id).delete()
         ListaEspera.query.filter_by(semana_id=id).delete()
-        Time.query.filter_by(semana_id=id).delete()
         EscolhaDraft.query.filter_by(semana_id=id).delete()
+        Time.query.filter_by(semana_id=id).delete()
         DraftStatus.query.filter_by(semana_id=id).delete()
         HistoricoDraft.query.filter_by(semana_id=id).delete()
         
@@ -4998,8 +4998,8 @@ def definir_capitaes_manual(semana_id):
     
     try:
         # Remover times existentes se houver
-        Time.query.filter_by(semana_id=semana.id).delete()
         EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
+        Time.query.filter_by(semana_id=semana.id).delete()
         
         # Criar novos times
         cores = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
@@ -5272,8 +5272,8 @@ def limpar_sorteio_capitaes(semana_id):
     
     try:
         # Remover todos os times e escolhas
-        Time.query.filter_by(semana_id=semana.id).delete()
         EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
+        Time.query.filter_by(semana_id=semana.id).delete()
         
         # Reabrir lista
         semana.lista_aberta = True
