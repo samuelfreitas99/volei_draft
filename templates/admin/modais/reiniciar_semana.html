@@ -60,3 +60,163 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ===== Requisitos do draft =====
+  function atualizarRequisitosDraft() {
+    const maxTimesEl = document.querySelector('#max_times');
+    const maxJogEl = document.querySelector('#max_jogadores_por_time');
+    if (!maxTimesEl || !maxJogEl) return;
+
+    const maxTimes = parseInt(maxTimesEl.value || '0', 10);
+    const maxJogadores = parseInt(maxJogEl.value || '0', 10);
+    const totalJogadores = maxTimes * maxJogadores;
+
+    const capNec = document.querySelector('#capitaesNecessarios');
+    const jogNec = document.querySelector('#jogadoresNecessarios');
+    if (capNec) capNec.textContent = String(maxTimes);
+    if (jogNec) jogNec.textContent = String(totalJogadores);
+
+    const totalCapitaes = {{ total_capitaes|int }};
+    const confirmados = {{ confirmados|int }};
+
+    const capitaesOk = totalCapitaes >= maxTimes;
+    const jogadoresOk = confirmados >= totalJogadores;
+
+    const capAtual = document.querySelector('#capitaesAtual');
+    const jogAtual = document.querySelector('#jogadoresAtual');
+
+    if (capAtual) {
+      capAtual.classList.toggle('text-success', capitaesOk);
+      capAtual.classList.toggle('text-danger', !capitaesOk);
+    }
+    if (jogAtual) {
+      jogAtual.classList.toggle('text-success', jogadoresOk);
+      jogAtual.classList.toggle('text-danger', !jogadoresOk);
+    }
+  }
+
+  document.querySelector('#max_times')?.addEventListener('change', atualizarRequisitosDraft);
+  document.querySelector('#max_jogadores_por_time')?.addEventListener('change', atualizarRequisitosDraft);
+  atualizarRequisitosDraft();
+
+  // ===== Modal reinício =====
+  const confirmText = document.querySelector('#confirmText');
+  const confirmBtn = document.querySelector('#confirmReinicioBtn');
+
+  if (confirmText && confirmBtn) {
+    confirmText.addEventListener('input', () => {
+      confirmBtn.disabled = (confirmText.value || '').toUpperCase() !== 'REINICIAR';
+    });
+  }
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      const originalHTML = confirmBtn.innerHTML;
+      confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Reiniciando...';
+      confirmBtn.disabled = true;
+
+      // melhor: usar o data-reiniciar-url que você já colocou no botão
+      const url = confirmBtn.getAttribute('data-reiniciar-url') || '{{ url_for("reiniciar_semana", semana_id=semana.id) }}';
+
+      setTimeout(() => {
+        window.location.href = url;
+      }, 700);
+    });
+  }
+
+  // ===== Toast =====
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container || typeof bootstrap === 'undefined') {
+      console.log(`[${type}] ${message}`);
+      return;
+    }
+
+    const icon =
+      type === 'success' ? 'check-circle' :
+      type === 'danger' ? 'exclamation-circle' :
+      type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="fas fa-${icon} me-2"></i>${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    `;
+
+    container.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    setTimeout(() => toast.remove(), 3200);
+  }
+
+  // ===== Confirmar mensalista =====
+  window.confirmarMensalista = function(jogadorId, semanaId) {
+    if (!confirm('Confirmar presença deste mensalista?')) return;
+
+    fetch('{{ url_for("confirmar_presenca") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `jogador_id=${encodeURIComponent(jogadorId)}&confirmar=true&semana_id=${encodeURIComponent(semanaId)}&codigo=confirmar`
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast('Mensalista confirmado!', 'success');
+        setTimeout(() => location.reload(), 900);
+      } else {
+        showToast('Erro: ' + (data.message || 'Falha'), 'danger');
+      }
+    })
+    .catch(() => showToast('Erro ao confirmar mensalista', 'danger'));
+  };
+
+  // ===== Confirmar todos mensalistas =====
+  window.confirmarTodosMensalistas = function() {
+    if (!confirm('Confirmar TODOS os mensalistas não confirmados?')) return;
+
+    showToast('Confirmando todos os mensalistas...', 'info');
+
+    const ids = [{% for j in mensalistas_nao_confirmados %}{{ j.id }},{% endfor %}].filter(Boolean);
+    if (ids.length === 0) {
+      showToast('Nenhum mensalista para confirmar', 'warning');
+      return;
+    }
+
+    Promise.all(ids.map(id =>
+      fetch('{{ url_for("confirmar_presenca") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `jogador_id=${encodeURIComponent(id)}&confirmar=true&semana_id={{ semana.id }}&codigo=confirmar`
+      }).then(r => r.json()).catch(() => ({success:false}))
+    )).then(results => {
+      const ok = results.filter(r => r && r.success).length;
+      showToast(`${ok} de ${ids.length} mensalistas confirmados!`, 'success');
+      setTimeout(() => location.reload(), 800);
+    });
+  };
+
+  // ===== Tooltips (Bootstrap 5) =====
+  if (typeof bootstrap !== 'undefined') {
+    document.querySelectorAll('[title]').forEach(el => {
+      new bootstrap.Tooltip(el);
+    });
+  }
+
+  // ===== Fechar menu mobile ao clicar =====
+  document.querySelectorAll('.mobile-nav-item').forEach(a => {
+    a.addEventListener('click', () => {
+      const collapseEl = document.getElementById('mobileMenuCollapse');
+      if (collapseEl && typeof bootstrap !== 'undefined') {
+        bootstrap.Collapse.getOrCreateInstance(collapseEl).hide();
+      }
+    });
+  });
+});
+</script>

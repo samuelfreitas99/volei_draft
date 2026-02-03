@@ -409,6 +409,119 @@ class MetaCofre(db.Model):
 # ======================================================
 # FUNÇÕES AUXILIARES
 # ======================================================
+def excluir_semana_seguro(semana_id):
+    """Exclui uma semana e todas as suas dependências de forma segura"""
+    try:
+        print(f"🔧 Excluindo semana {semana_id} e suas dependências...")
+        
+        # 1. Tabelas que dependem de Time (mas referenciam semana)
+        HistoricoDraft.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ HistoricoDraft excluído")
+        
+        EscolhaDraft.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ EscolhaDraft excluído")
+        
+        # 2. Pagamentos do cofre (se existirem)
+        PagamentoCofre.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ PagamentoCofre excluído")
+        
+        MovimentoCofre.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ MovimentoCofre excluído")
+        
+        # 3. Times (depois de excluir suas dependências acima)
+        Time.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ Times excluídos")
+        
+        # 4. Outras dependências diretas da semana
+        DraftStatus.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ DraftStatus excluído")
+        
+        Confirmacao.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ Confirmacao excluído")
+        
+        ListaEspera.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ ListaEspera excluído")
+        
+        # 5. Configurações específicas da semana (se existirem)
+        ConfiguracaoSemana.query.filter_by(semana_id=semana_id).delete()
+        print(f"   ✅ ConfiguracaoSemana excluído")
+        
+        print(f"✅ Todas dependências da semana {semana_id} excluídas com sucesso")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir semana {semana_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def excluir_time_seguro(time_id):
+    """Exclui um time e suas dependências de forma segura"""
+    try:
+        print(f"🔧 Excluindo time {time_id} e suas dependências...")
+        
+        # Buscar informações do time antes de excluir
+        time = Time.query.get(time_id)
+        if not time:
+            print(f"❌ Time {time_id} não encontrado")
+            return False
+        
+        semana_id = time.semana_id
+        capitao_id = time.capitao_id
+        
+        # 1. Excluir dependências do time
+        HistoricoDraft.query.filter_by(time_id=time_id).delete()
+        print(f"   ✅ HistoricoDraft do time excluído")
+        
+        EscolhaDraft.query.filter_by(time_id=time_id).delete()
+        print(f"   ✅ EscolhaDraft do time excluído")
+        
+        # 2. Remover status de capitão se necessário
+        if capitao_id:
+            capitao = Jogador.query.get(capitao_id)
+            if capitao and capitao.capitao:
+                # Verificar se é capitão em outros times
+                outros_times = Time.query.filter(
+                    Time.capitao_id == capitao_id,
+                    Time.id != time_id
+                ).count()
+                
+                if outros_times == 0:
+                    capitao.capitao = False
+                    if capitao.user and capitao.user.role == 'capitao':
+                        capitao.user.role = 'jogador'
+                    print(f"   ✅ Status de capitão removido do jogador {capitao.nome}")
+        
+        # 3. Excluir o time
+        db.session.delete(time)
+        print(f"   ✅ Time {time_id} excluído")
+        
+        # 4. Se draft está em andamento, ajustar status
+        if semana_id:
+            semana = Semana.query.get(semana_id)
+            if semana and semana.draft_em_andamento:
+                draft_status = DraftStatus.query.filter_by(semana_id=semana_id).first()
+                if draft_status and draft_status.vez_capitao_id == capitao_id:
+                    # Encontrar próximo time
+                    times_restantes = Time.query.filter_by(semana_id=semana_id).order_by(Time.ordem_escolha).all()
+                    if times_restantes:
+                        draft_status.vez_capitao_id = times_restantes[0].capitao_id
+                        print(f"   ✅ Vez do capitão ajustada para novo time")
+                    else:
+                        # Se não há mais times, finalizar draft
+                        draft_status.finalizado = True
+                        semana.draft_em_andamento = False
+                        semana.draft_finalizado = True
+                        print(f"   ✅ Draft finalizado (último time removido)")
+        
+        print(f"✅ Time {time_id} e dependências excluídos com sucesso")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erro ao excluir time {time_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def get_dia_semana_curto(numero_dia):
     """Retorna o nome curto do dia da semana"""
@@ -603,19 +716,7 @@ def limpar_semanas_fora_ciclo():
         flash(f'Não há semanas após o fim do ciclo atual ({format_date_func(ciclo_fim)})!', 'info')
         return redirect(url_for('admin_configuracoes'))
     
-    # Lista as semanas que serão removidas
-    semanas_para_remover = []
-    for semana in semanas_fora_ciclo:
-        semanas_para_remover.append({
-            'id': semana.id,
-            'data': semana.data,
-            'dia_semana': get_dia_semana_curto(semana.data.weekday()),
-            'status': 'Draft Finalizado' if semana.draft_finalizado else 
-                     'Draft em Andamento' if semana.draft_em_andamento else 
-                     'Lista Aberta' if semana.lista_aberta else 'Lista Fechada'
-        })
-    
-    # Remove semanas fora do ciclo
+    # Remove semanas fora do ciclo usando a função segura
     removidas = 0
     for semana in semanas_fora_ciclo:
         try:
@@ -624,38 +725,18 @@ def limpar_semanas_fora_ciclo():
                 print(f"⚠️ Mantida semana de {format_date_func(semana.data)} (draft finalizado no passado)")
                 continue
             
-            # Remove dados relacionados
-            Confirmacao.query.filter_by(semana_id=semana.id).delete()
-            ListaEspera.query.filter_by(semana_id=semana.id).delete()
-            EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
-            Time.query.filter_by(semana_id=semana.id).delete()
-            DraftStatus.query.filter_by(semana_id=semana.id).delete()
-            HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
-            
-            # Remove a semana
-            db.session.delete(semana)
-            removidas += 1
-            print(f"🗑️ Removida semana de {format_date_func(semana.data)} (fora do ciclo)")
+            # Usa função de limpeza segura
+            if limpar_semana_completa(semana.id):
+                # Remove a semana
+                db.session.delete(semana)
+                removidas += 1
+                print(f"🗑️ Removida semana de {format_date_func(semana.data)} (fora do ciclo)")
         except Exception as e:
             print(f"⚠️ Erro ao remover semana {semana.id}: {e}")
     
     if removidas > 0:
         db.session.commit()
-        
-        # Cria relatório das semanas removidas
-        relatorio = "\n".join([f"• {s['data'].strftime('%d/%m/%Y')} ({s['dia_semana']}) - {s['status']}" 
-                              for s in semanas_para_remover[:10]])
-        if len(semanas_para_remover) > 10:
-            relatorio += f"\n• ... e mais {len(semanas_para_remover) - 10} semanas"
-        
         flash(f'{removidas} semana(s) removida(s) por estarem após o fim do ciclo!', 'success')
-        
-        # Log detalhado
-        print(f"📋 Relatório de remoção:")
-        print(f"Ciclo ativo: {format_date_func(ciclo_inicio)} a {format_date_func(ciclo_fim)}")
-        print(f"Semanas removidas: {removidas}")
-        for s in semanas_para_remover[:5]:
-            print(f"  - {s['data'].strftime('%d/%m/%Y')} ({s['dia_semana']})")
     else:
         flash('Nenhuma semana removida.', 'info')
     
@@ -1369,7 +1450,6 @@ def emitir_status_draft_atualizado(semana_id):
 def recriar_semanas_automaticas():
     """Força a recriação de semanas automaticamente"""
     try:
-        # Remove semanas futuras primeiro
         hoje = date.today()
         semanas_futuras = Semana.query.filter(Semana.data >= hoje).all()
         
@@ -1380,13 +1460,11 @@ def recriar_semanas_automaticas():
                 if semana.draft_em_andamento or semana.draft_finalizado:
                     continue
                 
-                # Remove dados relacionados
-                Confirmacao.query.filter_by(semana_id=semana.id).delete()
-                ListaEspera.query.filter_by(semana_id=semana.id).delete()
-                
-                # Remove a semana
-                db.session.delete(semana)
-                removidas += 1
+                # **CORREÇÃO: Usa função segura de limpeza**
+                if limpar_semana_completa(semana.id):
+                    # Remove a semana
+                    db.session.delete(semana)
+                    removidas += 1
             except:
                 pass
         
@@ -1425,19 +1503,15 @@ def excluir_semana(id):
         return redirect(url_for('admin_todas_semanas'))
     
     try:
-        # Remove dados relacionados
-        Confirmacao.query.filter_by(semana_id=id).delete()
-        ListaEspera.query.filter_by(semana_id=id).delete()
-        EscolhaDraft.query.filter_by(semana_id=id).delete()
-        Time.query.filter_by(semana_id=id).delete()
-        DraftStatus.query.filter_by(semana_id=id).delete()
-        HistoricoDraft.query.filter_by(semana_id=id).delete()
-        
-        # Remove a semana
-        db.session.delete(semana)
-        db.session.commit()
-        
-        flash(f'Semana de {format_date_func(semana.data)} excluída com sucesso!', 'success')
+        # Usa função segura para excluir dependências
+        if excluir_semana_seguro(id):
+            # Agora pode excluir a semana com segurança
+            db.session.delete(semana)
+            db.session.commit()
+            
+            flash(f'Semana de {format_date_func(semana.data)} excluída com sucesso!', 'success')
+        else:
+            flash('Erro ao excluir dependências da semana!', 'danger')
         
     except Exception as e:
         db.session.rollback()
@@ -5271,7 +5345,8 @@ def limpar_sorteio_capitaes(semana_id):
         })
     
     try:
-        # Remover todos os times e escolhas
+        # **CORREÇÃO: Ordem correta**
+        HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
         EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
         Time.query.filter_by(semana_id=semana.id).delete()
         
@@ -5315,6 +5390,17 @@ def remover_time_sorteio(semana_id, time_id):
             })
     
     try:
+        # **CORREÇÃO: Primeiro exclui dependentes**
+        HistoricoDraft.query.filter_by(
+            semana_id=semana.id,
+            time_id=time_id
+        ).delete()
+        
+        EscolhaDraft.query.filter_by(
+            semana_id=semana.id,
+            time_id=time_id
+        ).delete()
+        
         # Se for capitão, remover status de capitão
         if time.capitao_id:
             capitao = Jogador.query.get(time.capitao_id)
@@ -5322,12 +5408,6 @@ def remover_time_sorteio(semana_id, time_id):
                 capitao.capitao = False
                 if capitao.user and capitao.user.role == 'capitao':
                     capitao.user.role = 'jogador'
-        
-        # Remover escolhas associadas
-        EscolhaDraft.query.filter_by(
-            semana_id=semana.id,
-            time_id=time_id
-        ).delete()
         
         # Remover o time
         db.session.delete(time)
@@ -5478,7 +5558,6 @@ def debug_ciclo():
 @admin_required
 def reiniciar_semana():
     """Reinicia a semana ESPECÍFICA selecionada"""
-    # Obtém semana_id da query string
     semana_id = request.args.get('semana_id', type=int)
     
     if semana_id:
@@ -5490,38 +5569,27 @@ def reiniciar_semana():
         flash('Semana não encontrada!', 'danger')
         return redirect(url_for('admin_dashboard'))
     
-    # Log da ação
-    print(f"Admin {current_user.username} reiniciando semana {semana.id} ({format_date_func(semana.data)})")
+    print(f"Admin {current_user.username} reiniciando semana {semana.id}")
     
     try:
-        # Remove todos os dados do draft DESTA SEMANA ESPECÍFICA
-        EscolhaDraft.query.filter_by(semana_id=semana.id).delete()
-        Time.query.filter_by(semana_id=semana.id).delete()
-        DraftStatus.query.filter_by(semana_id=semana.id).delete()
-        HistoricoDraft.query.filter_by(semana_id=semana.id).delete()
-        
-        # Reseta status da semana ESPECÍFICA
-        semana.draft_em_andamento = False
-        semana.draft_finalizado = False
-        semana.lista_encerrada = False
-        semana.lista_aberta = True
-        
-        # Remove confirmações DESTA SEMANA
-        Confirmacao.query.filter_by(semana_id=semana.id).delete()
-        
-        # Remove lista de espera DESTA SEMANA
-        ListaEspera.query.filter_by(semana_id=semana.id).delete()
-        
-        db.session.commit()
-        
-        flash(f'✅ Semana de {format_date_func(semana.data)} reiniciada com sucesso! Lista aberta para novas confirmações.', 'success')
-        
+        # Usa função de limpeza segura
+        if excluir_semana_seguro(semana.id):
+            # Reseta status da semana (não exclui a semana, apenas dados relacionados)
+            semana.draft_em_andamento = False
+            semana.draft_finalizado = False
+            semana.lista_encerrada = False
+            semana.lista_aberta = True
+            
+            db.session.commit()
+            
+            flash(f'✅ Semana de {format_date_func(semana.data)} reiniciada com sucesso!', 'success')
+        else:
+            flash(f'❌ Erro ao reiniciar semana!', 'danger')
+    
     except Exception as e:
         db.session.rollback()
         flash(f'❌ Erro ao reiniciar semana: {str(e)}', 'danger')
-        print(f"Erro ao reiniciar semana {semana.id}: {e}")
     
-    # Redireciona mantendo a semana selecionada
     return redirect(url_for('admin_dashboard', semana_id=semana.id))
 
 @app.route('/admin/jogador/novo', methods=['GET', 'POST'])
@@ -7980,7 +8048,7 @@ with app.app_context():
         criar_semanas_automaticas()
         print('✅ Semanas automáticas criadas')
 
-    # Busca semana atual, não criando novas se já existirem
+    # Busca semana atual, não criando novas se já existiremnano do
     get_semana_atual()
 
     print('✅ Sistema inicializado com sucesso!')

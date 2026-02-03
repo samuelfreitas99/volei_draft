@@ -1069,58 +1069,72 @@ function iniciarDraftDireto() {
     const modoDraft = '{{ semana.modo_draft or "linear" }}';
     const totalJogadoresNeeded = numTimes * jogadoresPorTime;
     
-    mostrarConfirmacao(
-        'Iniciar Draft',
-        `Deseja iniciar o draft com as configurações atuais?\n\n` +
-        `• Times: ${numTimes} formados\n` +
-        `• Modo: ${modoDraft === 'snake' ? 'Snake Draft' : 'Draft Linear'}\n` +
-        `• Tempo: ${tempoPorEscolha === 0 ? 'Sem limite' : tempoPorEscolha + ' segundos'}\n` +
-        `• Jogadores por time: ${jogadoresPorTime}\n` +
-        `• Total necessário: ${totalJogadoresNeeded} jogadores\n\n` +
-        `Os capitães já formados serão mantidos.`,
-        () => {
-            const button = event.target.closest('button');
-            const originalText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Iniciando...';
-            button.disabled = true;
+    // Verificar se há jogadores confirmados suficientes
+    fetch(`/api/confirmados/{{ semana.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.total < totalJogadoresNeeded) {
+                mostrarMensagem('warning', 'Atenção', 
+                    `Jogadores insuficientes! Necessário: ${totalJogadoresNeeded}, Confirmados: ${data.total}`);
+                return;
+            }
             
-            const formData = new FormData();
-            formData.append('semana_id', {{ semana.id }});
-            formData.append('modo_draft', modoDraft);
-            formData.append('tempo_por_escolha', tempoPorEscolha);
-            formData.append('max_times', numTimes);
-            formData.append('max_jogadores_por_time', jogadoresPorTime);
-            
-            fetch('{{ url_for("iniciar_draft") }}', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarMensagem('success', 'Draft Iniciado!', data.message);
-                    if (data.redirect_url) {
-                        setTimeout(() => {
-                            window.location.href = data.redirect_url;
-                        }, 1500);
-                    } else {
-                        setTimeout(() => {
-                            window.location.href = '{{ url_for("admin_dashboard", semana_id=semana.id) }}';
-                        }, 1500);
-                    }
-                } else {
-                    mostrarMensagem('error', 'Erro', data.message);
-                    button.innerHTML = originalText;
-                    button.disabled = false;
+            mostrarConfirmacao(
+                'Iniciar Draft',
+                `Deseja iniciar o draft com as configurações atuais?\n\n` +
+                `• Times: ${numTimes} formados\n` +
+                `• Modo: ${modoDraft === 'snake' ? 'Snake Draft' : 'Draft Linear'}\n` +
+                `• Tempo: ${tempoPorEscolha === 0 ? 'Sem limite' : tempoPorEscolha + ' segundos'}\n` +
+                `• Jogadores por time: ${jogadoresPorTime}\n` +
+                `• Total necessário: ${totalJogadoresNeeded} jogadores\n\n` +
+                `Os capitães já formados serão mantidos.`,
+                () => {
+                    const button = event.target.closest('button');
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Iniciando...';
+                    button.disabled = true;
+                    
+                    const formData = new FormData();
+                    formData.append('semana_id', {{ semana.id }});
+                    formData.append('modo_draft', modoDraft);
+                    formData.append('tempo_por_escolha', tempoPorEscolha);
+                    formData.append('max_times', numTimes);
+                    formData.append('max_jogadores_por_time', jogadoresPorTime);
+                    
+                    fetch('{{ url_for("iniciar_draft") }}', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            mostrarMensagem('success', 'Draft Iniciado!', data.message);
+                            if (data.redirect_url) {
+                                setTimeout(() => {
+                                    window.location.href = data.redirect_url;
+                                }, 1500);
+                            } else {
+                                setTimeout(() => {
+                                    window.location.href = '{{ url_for("admin_dashboard", semana_id=semana.id) }}';
+                                }, 1500);
+                            }
+                        } else {
+                            mostrarMensagem('error', 'Erro', data.message);
+                            button.innerHTML = originalText;
+                            button.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        mostrarMensagem('error', 'Erro', 'Erro ao iniciar draft: ' + error.message);
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    });
                 }
-            })
-            .catch(error => {
-                mostrarMensagem('error', 'Erro', 'Erro ao iniciar draft: ' + error.message);
-                button.innerHTML = originalText;
-                button.disabled = false;
-            });
-        }
-    );
+            );
+        })
+        .catch(error => {
+            mostrarMensagem('error', 'Erro', 'Erro ao verificar jogadores: ' + error.message);
+        });
 }
 
 // Função para trocar capitão de um time
