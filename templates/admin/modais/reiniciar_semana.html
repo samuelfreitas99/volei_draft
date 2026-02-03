@@ -50,9 +50,12 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-2"></i> Cancelar
                 </button>
-                <a href="{{ url_for('reiniciar_semana', semana_id=semana.id) }}" class="btn btn-danger">
+                <button type="button"
+                        class="btn btn-danger"
+                        id="confirmReinicioBtn"
+                        data-reiniciar-url="{{ url_for('reiniciar_semana', semana_id=semana.id) }}">
                     <i class="fas fa-redo me-2"></i> Sim, Reiniciar Agora
-                </a>
+                </button>
             </div>
         </div>
     </div>
