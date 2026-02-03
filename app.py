@@ -995,7 +995,25 @@ def inicializar_draft(semana, tempo_por_escolha=None, modo_draft=None, max_times
     if times_existentes and len(times_existentes) >= 2:
         # Usar times existentes em vez de criar novos
         times = times_existentes
-        capitaes = [Jogador.query.get(time.capitao_id) for time in times]
+        capitaes = []
+        for time in times:
+            if not time.capitao_id:
+                raise ValueError(f'Time {time.nome or time.id} está sem capitão definido!')
+            capitao = Jogador.query.get(time.capitao_id)
+            if not capitao:
+                raise ValueError(f'Capitão não encontrado para o time {time.nome or time.id}!')
+            capitaes.append(capitao)
+
+        if max_times is not None:
+            semana.max_times = max_times
+        elif semana.max_times != len(times):
+            semana.max_times = len(times)
+        if max_jogadores_por_time is not None:
+            semana.max_jogadores_por_time = max_jogadores_por_time
+        if tempo_por_escolha is not None:
+            semana.tempo_escolha = tempo_por_escolha
+        if modo_draft:
+            semana.modo_draft = modo_draft
         
         # IMPORTANTE: ANTES de iniciar o draft, desmarcar TODOS os jogadores como capitões no sistema
         # (os capitães serão definidos apenas pelos times deste draft)
@@ -2446,18 +2464,27 @@ def iniciar_draft():
     
     if not semana:
         return jsonify({'success': False, 'message': 'Semana não encontrada!'})
+
+    if semana.draft_em_andamento:
+        return jsonify({'success': False, 'message': 'Draft já está em andamento para esta semana!'})
     
     # Verificar se já tem times formados
-    times_existentes = Time.query.filter_by(semana_id=semana.id).count()
-    if times_existentes < 2:
+    times_existentes = Time.query.filter_by(semana_id=semana.id).all()
+    total_times_existentes = len(times_existentes)
+    if total_times_existentes < 2:
         return jsonify({
             'success': False, 
-            'message': f'É necessário pelo menos 2 times formados! Atual: {times_existentes}'
+            'message': f'É necessário pelo menos 2 times formados! Atual: {total_times_existentes}'
         })
     
     # Obtém configurações do formulário
     modo_draft = request.form.get('modo_draft', 'snake')
-    max_times = request.form.get('max_times', type=int, default=times_existentes)
+    max_times = request.form.get('max_times', type=int)
+    if not max_times or max_times < 2:
+        max_times = total_times_existentes
+    if max_times != total_times_existentes:
+        max_times = total_times_existentes
+
     max_jogadores_por_time = request.form.get('max_jogadores_por_time', type=int, default=6)
     tempo_por_escolha = request.form.get('tempo_por_escolha', type=int, default=0)
     

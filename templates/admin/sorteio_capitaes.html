@@ -234,12 +234,12 @@
                                         <a href="{{ url_for('configurar_draft', semana_id=semana.id) }}" class="btn btn-info btn-sm">
                                             <i class="fas fa-cog me-1"></i>Configurar Draft
                                         </a>
-                                        <button class="btn btn-success btn-sm pulse" onclick="iniciarDraftDireto()">
+                                        <button class="btn btn-success btn-sm pulse" onclick="iniciarDraftDireto(this)">
                                             <i class="fas fa-play me-1"></i>Iniciar Draft
                                         </button>
                                     {% endif %}
                                     {% if times_existentes|length >= quantidade_capitaes %}
-                                        <button class="btn btn-warning btn-sm pulse" onclick="iniciarDraftDireto()">
+                                        <button class="btn btn-warning btn-sm pulse" onclick="iniciarDraftDireto(this)">
                                             <i class="fas fa-play me-1"></i>Iniciar Draft
                                         </button>
                                     {% endif %}
@@ -1062,11 +1062,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Atualize a função iniciarDraftDireto
-function iniciarDraftDireto() {
+function iniciarDraftDireto(buttonEl) {
     const numTimes = {{ times_existentes|length }};
+    const maxTimesSemana = {{ quantidade_capitaes }};
     const jogadoresPorTime = {{ semana.max_jogadores_por_time or 6 }};
-    const tempoPorEscolha = {{ semana.tempo_escolha or 30 }};
+    const tempoPorEscolha = {{ semana.tempo_escolha if semana.tempo_escolha is not none else 0 }};
     const modoDraft = '{{ semana.modo_draft or "linear" }}';
+
+    if (numTimes !== maxTimesSemana) {
+        mostrarMensagem(
+            'warning',
+            'Atenção',
+            `Quantidade de times (${numTimes}) diferente do configurado (${maxTimesSemana}). Ajuste os capitães antes de iniciar.`
+        );
+        return;
+    }
+
     const totalJogadoresNeeded = numTimes * jogadoresPorTime;
     
     // Verificar se há jogadores confirmados suficientes
@@ -1089,7 +1100,7 @@ function iniciarDraftDireto() {
                 `• Total necessário: ${totalJogadoresNeeded} jogadores\n\n` +
                 `Os capitães já formados serão mantidos.`,
                 () => {
-                    const button = event.target.closest('button');
+                    const button = buttonEl || document.querySelector('button[onclick*="iniciarDraftDireto"]');
                     const originalText = button.innerHTML;
                     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Iniciando...';
                     button.disabled = true;
